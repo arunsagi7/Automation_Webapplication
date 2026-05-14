@@ -1,0 +1,10 @@
+venv/
+.env
+__pycache__/
+*.pyc
+screenshots/*.png
+test.png
+input_images/*
+!input_images/.gitkeep
+.vscode/
+.idea/
