@@ -1069,7 +1069,7 @@
           view_max: settings.viewMax,
         }));
 
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const resp = await fetch(`${api}/crm/process`, {
           method: 'POST', body: formData,
         });
@@ -1205,7 +1205,7 @@
       const tbody = document.getElementById('rules-tbody');
       tbody.innerHTML = `<tr><td colspan="6" class="empty-rules"><i class='bx bx-loader-alt bx-spin'></i> Loading from database...</td></tr>`;
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const resp = await fetch(`${api}/crm/rules`);
         if (!resp.ok) throw new Error(`Server error ${resp.status}`);
         dbRules = await resp.json();
@@ -1242,7 +1242,7 @@
       if (!toSave.length) { showToast('No rule entries found', 'error'); return; }
 
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
 
         if (_editingId !== null) {
           // ── UPDATE existing rule ──
@@ -1327,7 +1327,7 @@
     /** Delete a rule from ctr_db by its DB id */
     async function deleteRule(ruleId) {
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const resp = await fetch(`${api}/crm/rules/${ruleId}`, { method: 'DELETE' });
         if (!resp.ok) throw new Error(`Server error ${resp.status}`);
         await loadCampaignRules();
@@ -1389,7 +1389,7 @@
     async function checkBackend() {
       const el = document.getElementById('backend-status');
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const r = await fetch(`${api}/health`, { signal: AbortSignal.timeout(3000) });
         if (r.ok) { el.textContent = 'Local Backend'; el.style.color = 'var(--success)'; }
         else throw new Error();
@@ -1443,7 +1443,7 @@
       const tbody = document.getElementById('files-tbody');
       tbody.innerHTML = `<tr><td colspan="6" class="empty-rules"><i class='bx bx-loader-alt bx-spin'></i> Loading...</td></tr>`;
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const resp = await fetch(`${api}/crm/processed-files`);
         if (!resp.ok) throw new Error(`Server error ${resp.status}`);
         const files = await resp.json();
@@ -1484,7 +1484,7 @@
 
     async function downloadFile(encodedName, displayName) {
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const resp = await fetch(`${api}/crm/download/${encodedName}`);
         if (resp.status === 404) {
           showToast('File not available — it was processed before storage was enabled. Re-process the file to download.', 'error');

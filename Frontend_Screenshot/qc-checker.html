@@ -855,7 +855,7 @@
       wrap.innerHTML = `<div class="qc-empty"><i class='bx bx-loader-alt bx-spin' style="font-size:1.4rem;display:block;margin-bottom:8px;"></i>Loading…</div>`;
 
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const resp = await fetch(`${api}/final-report/reports`);
         if (!resp.ok) throw new Error(`Server error ${resp.status}`);
         _reports = await resp.json();
@@ -953,7 +953,7 @@
     // ── Download ───────────────────────────────────────────────────────
     async function downloadReport(id, filename) {
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const resp = await fetch(`${api}/final-report/reports/${id}/download`);
         if (!resp.ok) throw new Error(`Server error ${resp.status}`);
         const blob = await resp.blob();
@@ -973,7 +973,7 @@
     async function deleteReport(id) {
       if (!confirm('Delete this report from the database?')) return;
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const resp = await fetch(`${api}/final-report/reports/${id}`, { method: 'DELETE' });
         if (!resp.ok) throw new Error(`Server error ${resp.status}`);
         showToast('Report deleted', 'success');
@@ -1009,7 +1009,7 @@
 
       // Auto-fetch reach data
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const resp = await fetch(`${api}/final-report/reports/${_selectedId}/reach-data`);
         if (!resp.ok) throw new Error(`Server error ${resp.status}`);
         const data = await resp.json();
@@ -1143,7 +1143,7 @@
       btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> Running QC…`;
 
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const resp = await fetch(`${api}/final-report/reports/${_selectedId}/send-to-qc`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1176,7 +1176,7 @@
       e.preventDefault();
       if (!_selectedId) return;
       try {
-        const api  = window._API || 'http://127.0.0.1:8001';
+        const api  = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const resp = await fetch(`${api}/final-report/reports/${_selectedId}/download`);
         if (!resp.ok) throw new Error(`Server error ${resp.status}`);
         const blob = await resp.blob();
@@ -1199,7 +1199,7 @@
     async function checkBackend() {
       const el = document.getElementById('backend-status');
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const r = await fetch(`${api}/health`, { signal: AbortSignal.timeout(3000) });
         if (r.ok) { el.textContent = 'Local Backend'; el.style.color = 'var(--success)'; }
         else throw new Error();

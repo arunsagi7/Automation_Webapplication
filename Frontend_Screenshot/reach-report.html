@@ -837,7 +837,7 @@
        Upload to backend → /reach-report/upload
     ═══════════════════════════════════════════════════════════ */
     async function uploadFiles(files, zone) {
-      const api = window._API || 'http://127.0.0.1:8001';
+      const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
       const form = new FormData();
       files.forEach(f => form.append('files', f));
 
@@ -955,7 +955,7 @@
        Status bar + Process button
     ═══════════════════════════════════════════════════════════ */
     function updateStatus(title, sub, enableBtn) {
-      const api = window._API || 'http://127.0.0.1:8001';
+      const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
       const ready = !!_templateFile && _burstFiles.length > 0;
       const total = _burstFiles.length + (_templateFile ? 1 : 0);
 
@@ -1011,7 +1011,7 @@
       updateStepBar(2);
 
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const platform = document.getElementById('sel-platform').value;
         const format = document.getElementById('sel-format').value;
 
@@ -1077,7 +1077,7 @@
       const container = document.getElementById('history-list');
       container.innerHTML = `<div class="hist-empty"><i class='bx bx-loader-alt bx-spin' style="font-size:1.4rem;display:block;margin-bottom:8px;"></i>Loading…</div>`;
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const resp = await fetch(`${api}/reach-report/history`);
         if (!resp.ok) throw new Error(`Server error ${resp.status}`);
         const reports = await resp.json();
@@ -1133,7 +1133,7 @@
 
     async function downloadReport(id, filename) {
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const resp = await fetch(`${api}/reach-report/history/${id}/download`);
         if (!resp.ok) throw new Error(`Server error ${resp.status}`);
         const blob = await resp.blob();
@@ -1152,7 +1152,7 @@
     async function deleteReport(id) {
       if (!confirm('Delete this report from history?')) return;
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const resp = await fetch(`${api}/reach-report/history/${id}`, { method: 'DELETE' });
         if (!resp.ok) throw new Error(`Server error ${resp.status}`);
         toast('Report deleted', 'success');
@@ -1171,7 +1171,7 @@
       const label = document.getElementById('badge-label');
       const bstat = document.getElementById('backend-status');
       try {
-        const api = window._API || 'http://127.0.0.1:8001';
+        const api = (window.API_BASE_URL || window._API || 'http://127.0.0.1:8001').replace(/\/$/, '');
         const resp = await fetch(`${api}/health`, { signal: AbortSignal.timeout(3000) });
         if (resp.ok) {
           dot.style.background = '#10b981';
