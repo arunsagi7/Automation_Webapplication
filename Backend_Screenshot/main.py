@@ -149,6 +149,32 @@ async def startup_event():
             conn.rollback()
     logger.info("CRM DB column migrations complete")
 
+    # ── Auto-create default super_admin if no users exist ────────────────────
+    try:
+        from database.crm_db import CrmSessionLocal
+        from models.user import User
+        from core.security import hash_password
+        db = CrmSessionLocal()
+        try:
+            user_count = db.query(User).count()
+            if user_count == 0:
+                default_admin = User(
+                    username="admin",
+                    hashed_password=hash_password("Admin@123"),
+                    role="super_admin",
+                    email="admin@example.com",
+                    allowed_pages=["scanner", "crm_excel", "ppt_store", "final_report", "reach_report"],
+                )
+                db.add(default_admin)
+                db.commit()
+                logger.info("Default super_admin created (username=admin)")
+            else:
+                logger.info("Users already exist — skipping default admin creation")
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning("Could not auto-create admin: %s", e)
+
 
 # ── Frontend UI (served from /ui/) ────────────────────────────────────────────
 if os.path.isfile(os.path.join(FRONTEND_DIR, "index.html")):
