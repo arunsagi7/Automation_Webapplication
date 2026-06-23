@@ -447,9 +447,11 @@
 </div>
 
 <script>
-  const API_BASE = window.location.origin.includes('127.0.0.1') || window.location.origin.includes('localhost')
-    ? 'http://127.0.0.1:8001'
-    : window.location.origin;
+  const API_BASE = window.API_BASE_URL
+    ? window.API_BASE_URL.replace(/\/$/, '')
+    : (window.location.origin.includes('127.0.0.1') || window.location.origin.includes('localhost')
+        ? 'http://127.0.0.1:8001'
+        : window.location.origin);
 
   // Already logged in? Redirect to correct page based on role
   if (localStorage.getItem('access_token')) {
