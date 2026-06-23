@@ -20,9 +20,9 @@ Page keys:
 """
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String
+from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String, text
 
-from database.db import Base
+from database.crm_db import CrmBase as Base
 
 
 class User(Base):
@@ -39,6 +39,7 @@ class User(Base):
     is_active     = Column(Boolean, default=True, nullable=False)
     created_at    = Column(
         DateTime(timezone=True),
+        server_default=text("now()"),
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )

@@ -12,12 +12,12 @@ import os
 # Make sure Backend_Screenshot is in path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from database.db import engine, SessionLocal, Base
-import models.user  # registers User with Base
+from database.crm_db import crm_engine, CrmSessionLocal as SessionLocal, CrmBase
+import models.user  # registers User with CrmBase
 from models.user import User
 from core.security import hash_password
 
-Base.metadata.create_all(bind=engine)   # creates users table
+CrmBase.metadata.create_all(bind=crm_engine)   # creates users table
 
 def create_super_admin(username: str, password: str, email: str = ""):
     db = SessionLocal()

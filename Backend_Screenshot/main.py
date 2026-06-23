@@ -25,7 +25,7 @@ from core.config import get_settings
 from core.logging import configure_logging
 from core.paths import FRONTEND_DIR, get_paths
 from database.db import engine
-from routers import auth, creatives, crm, final_report, ppt_store, results, scan, screenshot_db, users, utilities
+from routers import auth, creatives, crm, final_report, ppt_store, reach_report, results, scan, screenshot_db, users, utilities
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 configure_logging()
@@ -48,9 +48,15 @@ app = FastAPI(
 )
 
 # ── Middleware ────────────────────────────────────────────────────────────────
+_raw_origins = settings.allowed_origins.strip()
+_origins = (
+    [o.strip() for o in _raw_origins.split(",") if o.strip()]
+    if _raw_origins
+    else ["*"]
+)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],       # Lock this to your domain in production
+    allow_origins=_origins,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,6 +73,7 @@ app.include_router(utilities.router)
 app.include_router(crm.router)
 app.include_router(final_report.router)
 app.include_router(screenshot_db.router)
+app.include_router(reach_report.router)
 
 # ── Static directories ────────────────────────────────────────────────────────
 paths = get_paths()
@@ -92,15 +99,15 @@ async def startup_event():
     logger.info("Starting Creative Scanner Pro [env=%s]", settings.app_env)
 
     from models.screenshot import Base
-    import models.user  # noqa: F401 — registers User with Base
     Base.metadata.create_all(bind=engine)
-    logger.info("scanner.db tables ready (incl. users)")
+    logger.info("scanner_db tables ready")
 
-    # ── ctr_db: create scan_screenshots table if it doesn't exist ─────────────
+    # ── ctr_db: users + scan_screenshots tables ────────────────────────────────
     from database.crm_db import crm_engine, CrmBase
+    import models.user          # noqa: F401 — registers User with CrmBase
     import models.scan_screenshot  # noqa: F401 — registers ScanScreenshot with CrmBase
     CrmBase.metadata.create_all(bind=crm_engine)
-    logger.info("ctr_db scan_screenshots table ready")
+    logger.info("ctr_db tables ready (users + scan_screenshots)")
 
     # Column-level migration guard (safe to run repeatedly)
     # Replace this with Alembic once you adopt proper migrations.

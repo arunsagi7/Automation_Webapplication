@@ -25,19 +25,26 @@
       <div class="nav-label">MAIN</div>
       <a href="#" class="nav-item active"><i class='bx bxs-dashboard'></i> Dashboard</a>
       <a href="ppt-store.html" class="nav-item"><i class='bx bx-broadcast'></i> PPT Store</a>
-      <a href="#" class="nav-item nav-item--soon" title="Coming Soon"><i class='bx bx-link'></i> URL Manager <span class="nav-badge-soon">Soon</span></a>
-      <a href="#" class="nav-item nav-item--soon" title="Coming Soon"><i class='bx bx-image'></i> Image Manager <span class="nav-badge-soon">Soon</span></a>
-      <a href="#" class="nav-item nav-item--soon" title="Coming Soon"><i class='bx bx-shield'></i> VPN Manager <span class="nav-badge-soon">Soon</span></a>
-      <a href="#" class="nav-item nav-item--soon" title="Coming Soon"><i class='bx bx-task'></i> Tasks <span class="nav-badge-soon">Soon</span></a>
+      <a href="#" class="nav-item nav-item--soon" title="Coming Soon"><i class='bx bx-link'></i> URL Manager <span
+          class="nav-badge-soon">Soon</span></a>
+      <a href="#" class="nav-item nav-item--soon" title="Coming Soon"><i class='bx bx-image'></i> Image Manager <span
+          class="nav-badge-soon">Soon</span></a>
+      <a href="#" class="nav-item nav-item--soon" title="Coming Soon"><i class='bx bx-shield'></i> VPN Manager <span
+          class="nav-badge-soon">Soon</span></a>
+      <a href="#" class="nav-item nav-item--soon" title="Coming Soon"><i class='bx bx-task'></i> Tasks <span
+          class="nav-badge-soon">Soon</span></a>
       <div class="nav-label">ANALYTICS</div>
-      <a href="#" class="nav-item nav-item--soon" title="Coming Soon"><i class='bx bx-bar-chart-alt-2'></i> Reports <span class="nav-badge-soon">Soon</span></a>
-      <a href="#" class="nav-item nav-item--soon" title="Coming Soon"><i class='bx bx-history'></i> Activity Logs <span class="nav-badge-soon">Soon</span></a>
+      <a href="#" class="nav-item nav-item--soon" title="Coming Soon"><i class='bx bx-bar-chart-alt-2'></i> Reports
+        <span class="nav-badge-soon">Soon</span></a>
+      <a href="#" class="nav-item nav-item--soon" title="Coming Soon"><i class='bx bx-history'></i> Activity Logs <span
+          class="nav-badge-soon">Soon</span></a>
       <div class="nav-label">SYSTEM</div>
       <a href="crm-excel.html" class="nav-item"><i class='bx bx-credit-card'></i> CRM Excel Processor</a>
       <a href="final-report.html" class="nav-item"><i class='bx bx-file'></i> Final Report</a>
-      <a href="#" class="nav-item nav-item--soon" title="Coming Soon"><i class='bx bx-support'></i> Reach Report <span class="nav-badge-soon">Soon</span></a>
-      <a href="#" class="nav-item nav-item--soon" title="Coming Soon"><i class='bx bx-cog'></i> Settings <span class="nav-badge-soon">Soon</span></a>
-
+      <a href="qc-checker.html" class="nav-item"><i class='bx bx-badge-check'></i> QC Checker</a>
+      <a href="reach-report.html" class="nav-item"><i class='bx bx-target-lock'></i> Reach Report</a>
+      <a href="#" class="nav-item nav-item--soon" title="Coming Soon"><i class='bx bx-cog'></i> Settings <span
+          class="nav-badge-soon">Soon</span></a>
     </nav>
 
     <div class="sidebar-footer">
@@ -48,13 +55,17 @@
           <div id="backend-status" class="sys-status-sub">Checking...</div>
         </div>
       </div>
-      <div class="user-row" id="userRow" style="display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 0;border-top:1px solid rgba(99,102,241,0.1);">
+      <div class="user-row" id="userRow"
+        style="display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 0;border-top:1px solid rgba(99,102,241,0.1);">
         <i class='bx bx-user-circle' style="font-size:1.3rem;color:#6366f1;"></i>
         <div style="flex:1;min-width:0;">
-          <div id="sidebarUsername" style="font-size:0.78rem;font-weight:600;color:#e3e3e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</div>
+          <div id="sidebarUsername"
+            style="font-size:0.78rem;font-weight:600;color:#e3e3e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            —</div>
           <div id="sidebarRole" style="font-size:0.68rem;color:#6b7280;text-transform:capitalize;">—</div>
         </div>
-        <button id="logoutBtn" title="Logout" style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:1.1rem;padding:2px;">
+        <button id="logoutBtn" title="Logout"
+          style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:1.1rem;padding:2px;">
           <i class='bx bx-log-out'></i>
         </button>
       </div>
@@ -340,20 +351,29 @@
   <script type="module" src="src/main.js?v=4"></script>
   <script>
     // Auth guard — redirect to login if no token or no page access
-    (function() {
+    (function () {
       const token = localStorage.getItem('access_token');
       if (!token) { window.location.href = 'login.html'; return; }
 
       // Page-level permission check (this page key = 'scanner')
-      const pagesRaw     = localStorage.getItem('allowed_pages');
+      const pagesRaw = localStorage.getItem('allowed_pages');
       const allowedPages = pagesRaw ? JSON.parse(pagesRaw) : null;
       if (allowedPages !== null && !allowedPages.includes('scanner')) {
-        window.location.href = 'login.html'; return;
+        // Redirect to their actual allowed page instead of login
+        const pageMap = {
+          crm_excel: 'crm-excel.html',
+          ppt_store: 'ppt-store.html',
+          final_report: 'final-report.html',
+          scanner: 'index.html',
+        };
+        const first = allowedPages[0];
+        window.location.href = first ? (pageMap[first] || 'login.html') : 'login.html';
+        return;
       }
 
       // Show user info in sidebar
       const username = localStorage.getItem('username') || '';
-      const role     = localStorage.getItem('user_role') || '';
+      const role = localStorage.getItem('user_role') || '';
       const uEl = document.getElementById('sidebarUsername');
       const rEl = document.getElementById('sidebarRole');
       if (uEl) uEl.textContent = username;
@@ -361,9 +381,9 @@
 
       // Hide nav items the user has no access to
       const pageNavMap = {
-        scanner:      '[href="index.html"], [href="./"], [href="."]',
-        crm_excel:    '[href="crm-excel.html"]',
-        ppt_store:    '[href="ppt-store.html"]',
+        scanner: '[href="index.html"], [href="./"], [href="."]',
+        crm_excel: '[href="crm-excel.html"]',
+        ppt_store: '[href="ppt-store.html"]',
         final_report: '[href="final-report.html"]',
       };
       if (allowedPages !== null) {
@@ -383,13 +403,4 @@
         logoutBtn.addEventListener('click', () => {
           localStorage.removeItem('access_token');
           localStorage.removeItem('user_role');
-          localStorage.removeItem('username');
-          localStorage.removeItem('allowed_pages');
-          window.location.href = 'login.html';
-        });
-      }
-    })();
-  </script>
-</body>
-
-</html>
+          localStorage.removeIt

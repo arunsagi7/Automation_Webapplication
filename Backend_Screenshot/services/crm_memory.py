@@ -19,12 +19,17 @@ def load_yesterday_memory(session: Session) -> Dict[str, List[dict]]:
     """
     Return {line_item_id: [{"clicks": int, "ctr": "0.42%"}, ...]}
     """
-    rows = session.query(YesterdayMemory).all()
     memory: Dict[str, List[dict]] = {}
-    for r in rows:
-        memory.setdefault(r.line_item_id, []).append(
-            {"clicks": r.clicks, "ctr": r.ctr}
-        )
+    try:
+        rows = session.query(YesterdayMemory).all()
+        for r in rows:
+            memory.setdefault(r.line_item_id, []).append(
+                {"clicks": r.clicks, "ctr": r.ctr}
+            )
+    except Exception as e:
+        session.rollback()   # reset session so subsequent writes still work
+        import logging
+        logging.getLogger(__name__).warning("Could not load yesterday_memory: %s", e)
     return memory
 
 

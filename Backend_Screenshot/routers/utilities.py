@@ -1,12 +1,14 @@
 """
-Utilities router — health check, image base64, PPT assets, VPN stub.
+Utilities router — health check, image base64, PPT assets, VPN stub, Excel→CSV converter.
 """
+import io
 import logging
 import os
 from typing import Optional
 
-from fastapi import APIRouter, Depends
-from fastapi.responses import JSONResponse
+import pandas as pd
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from core.auth import require_api_key
 from core.config import get_settings
@@ -35,6 +37,54 @@ def _blend(a: str, b: str, ratio: float) -> str:
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
+
+# ── Excel → CSV Converter ─────────────────────────────────────────────────────
+_ENGINE_MAP = {
+    "xlsx": "openpyxl",
+    "xls":  "xlrd",
+    "xlsm": "openpyxl",
+    "ods":  "odf",
+}
+
+@router.post("/convert/excel-to-csv", tags=["Utilities"])
+async def excel_to_csv(
+    file: UploadFile = File(...),
+    _: None = Depends(require_api_key),
+):
+    """
+    Convert any Excel file (.xlsx, .xls, .xlsm, .ods) to CSV.
+    Reads the first sheet and returns a UTF-8 CSV file for download.
+    """
+    ext = (file.filename or "").rsplit(".", 1)[-1].lower()
+    engine = _ENGINE_MAP.get(ext)
+
+    if engine is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type: .{ext}. Please upload .xlsx, .xls, .xlsm, or .ods",
+        )
+
+    raw = await file.read()
+    try:
+        df = pd.read_excel(io.BytesIO(raw), sheet_name=0, engine=engine)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not read Excel file: {e}")
+
+    if df.empty:
+        raise HTTPException(status_code=400, detail="Excel file is empty.")
+
+    # Convert to CSV
+    buf = io.BytesIO()
+    df.to_csv(buf, index=False, encoding="utf-8-sig")
+    buf.seek(0)
+
+    csv_filename = (file.filename or "output").rsplit(".", 1)[0] + ".csv"
+    return StreamingResponse(
+        buf,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{csv_filename}"'},
+    )
+
 
 @router.get("/health", tags=["System"])
 def health():

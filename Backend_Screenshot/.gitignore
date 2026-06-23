@@ -27,6 +27,16 @@ input_images/*
 !input_images/desktop/.gitkeep
 !input_images/mobile/.gitkeep
 
+# Generated output files — too large / ephemeral for git
+final_report_outputs/*.xlsx
+final_report_outputs/*.xls
+processed_outputs/*.csv
+processed_outputs/*.xlsx
+
+# Logs
+*.log
+backend_log.txt
+
 # IDE
 .vscode/
 .idea/

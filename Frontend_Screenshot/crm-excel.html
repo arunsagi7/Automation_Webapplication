@@ -13,13 +13,25 @@
       margin-left: var(--sidebar-w);
       padding: 28px 32px;
       min-height: 100vh;
+      width: calc(100% - var(--sidebar-w));
+      box-sizing: border-box;
     }
 
     /* Full-width mode when sidebar is hidden (restricted admin) */
     body.no-sidebar .crm-wrap {
       margin-left: 0 !important;
-      padding: 28px 40px;     /* same comfortable padding on all 4 tabs */
+      padding: 28px 40px;
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box;
     }
+
+    body.no-sidebar .crm-wrap>* {
+      max-width: 100% !important;
+      width: 100% !important;
+      box-sizing: border-box;
+    }
+
     body.no-sidebar #crm-sidebar {
       display: none !important;
     }
@@ -582,16 +594,37 @@
     }
 
     /* Ad-type badges */
-    .badge-video  { background:rgba(139,92,246,0.15); color:#8b5cf6; border:1px solid rgba(139,92,246,0.3);
-                    font-size:0.68rem; font-weight:700; padding:2px 8px; border-radius:20px;
-                    display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
-    .badge-banner { background:rgba(16,185,129,0.12); color:#10b981;  border:1px solid rgba(16,185,129,0.25);
-                    font-size:0.68rem; font-weight:700; padding:2px 8px; border-radius:20px;
-                    display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+    .badge-video {
+      background: rgba(139, 92, 246, 0.15);
+      color: #8b5cf6;
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    .badge-banner {
+      background: rgba(16, 185, 129, 0.12);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
 
     /* Date-group header row inside processed-files table */
     .date-group-row td {
-      background: rgba(99,102,241,0.07);
+      background: rgba(99, 102, 241, 0.07);
       color: var(--accent);
       font-size: 0.72rem;
       font-weight: 700;
@@ -638,7 +671,8 @@
       <div class="nav-label">SYSTEM</div>
       <a href="crm-excel.html" class="nav-item active"><i class='bx bx-credit-card'></i> CRM Excel Processor</a>
       <a href="#" class="nav-item"><i class='bx bx-key'></i> Final Report</a>
-      <a href="#" class="nav-item"><i class='bx bx-support'></i> Reach Report</a>
+      <a href="qc-checker.html" class="nav-item"><i class='bx bx-badge-check'></i> QC Checker</a>
+      <a href="reach-report.html" class="nav-item"><i class='bx bx-target-lock'></i> Reach Report</a>
       <a href="#" class="nav-item"><i class='bx bx-cog'></i> Settings</a>
     </nav>
     <div class="sidebar-footer">
@@ -669,8 +703,7 @@
           <div id="headerUsername" style="font-size:0.8rem; font-weight:600; color:#e3e3e8;">—</div>
           <div id="headerRole" style="font-size:0.7rem; color:#6b7280; text-transform:capitalize;">—</div>
         </div>
-        <button id="headerLogoutBtn" title="Logout"
-          style="background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.25); color:#6366f1;
+        <button id="headerLogoutBtn" title="Logout" style="background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.25); color:#6366f1;
                  border-radius:8px; padding:6px 14px; font-size:0.78rem; font-weight:600; cursor:pointer;
                  display:flex; align-items:center; gap:5px;">
           <i class='bx bx-log-out'></i> Logout
@@ -805,7 +838,8 @@
           <div>
             <div class="crm-card-title">Campaign Rules</div>
             <div class="crm-card-sub">Per-campaign VCR and Viewability overrides. Loaded from
-              <strong>ctr_db.campaign_rules</strong></div>
+              <strong>ctr_db.campaign_rules</strong>
+            </div>
           </div>
           <button class="btn-add-more" onclick="loadCampaignRules()" style="margin:0;">
             <i class='bx bx-refresh'></i> Refresh
@@ -1045,12 +1079,12 @@
         }
 
         const blob = await resp.blob();
-        const url  = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(blob);
 
         // Detect whether backend returned a ZIP (multi-sheet) or CSV (single sheet)
         const contentType = resp.headers.get('content-type') || '';
         const isZip = contentType.includes('zip');
-        const stem  = selectedFile.name.replace(/\.[^.]+$/, '');
+        const stem = selectedFile.name.replace(/\.[^.]+$/, '');
         const outName = isZip
           ? `processed_${stem}.zip`
           : `processed_${stem}.csv`;
@@ -1364,15 +1398,15 @@
     // ── Processed Files ───────────────────────────────────────────────
     function _dateGroup(isoStr) {
       if (!isoStr) return 'Unknown';
-      const now   = new Date();
-      const d     = new Date(isoStr);
-      const todayStart     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const now = new Date();
+      const d = new Date(isoStr);
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const yesterdayStart = new Date(todayStart - 86400000);
-      const weekStart      = new Date(todayStart - 6 * 86400000);  // last 7 days
+      const weekStart = new Date(todayStart - 6 * 86400000);  // last 7 days
 
-      if (d >= todayStart)     return 'Today';
+      if (d >= todayStart) return 'Today';
       if (d >= yesterdayStart) return 'Yesterday';
-      if (d >= weekStart)      return 'This Week';
+      if (d >= weekStart) return 'This Week';
       return 'Older';
     }
 
@@ -1483,13 +1517,13 @@
     loadCampaignRules();
   </script>
   <script>
-    (function() {
+    (function () {
       const token = localStorage.getItem('access_token');
       if (!token) { window.location.href = 'login.html'; return; }
 
       // Page-level permission check
-      const role         = localStorage.getItem('user_role') || '';
-      const pagesRaw     = localStorage.getItem('allowed_pages');
+      const role = localStorage.getItem('user_role') || '';
+      const pagesRaw = localStorage.getItem('allowed_pages');
       const allowedPages = pagesRaw ? JSON.parse(pagesRaw) : null;
       // null = super_admin (all access); list must include this page's key
       if (allowedPages !== null && !allowedPages.includes('crm_excel')) {
@@ -1500,22 +1534,22 @@
 
       // ── Sidebar: show only for super_admin (allowedPages === null) ──
       const isRestricted = allowedPages !== null;
-      const sidebar  = document.getElementById('crm-sidebar');
-      const crmWrap  = document.getElementById('crm-wrap');
+      const sidebar = document.getElementById('crm-sidebar');
+      const crmWrap = document.getElementById('crm-wrap');
 
       if (isRestricted) {
         // Hide sidebar and expand all tab panels to full width via CSS class
         document.body.classList.add('no-sidebar');
 
         // Show user info + logout in header instead
-        const headerUserArea  = document.getElementById('header-user-area');
-        const headerUsername  = document.getElementById('headerUsername');
-        const headerRole      = document.getElementById('headerRole');
+        const headerUserArea = document.getElementById('header-user-area');
+        const headerUsername = document.getElementById('headerUsername');
+        const headerRole = document.getElementById('headerRole');
         const headerLogoutBtn = document.getElementById('headerLogoutBtn');
 
         if (headerUserArea) headerUserArea.style.display = 'flex';
         if (headerUsername) headerUsername.textContent = username;
-        if (headerRole)     headerRole.textContent = role.replace('_', ' ');
+        if (headerRole) headerRole.textContent = role.replace('_', ' ');
         if (headerLogoutBtn) {
           headerLogoutBtn.addEventListener('click', () => {
             localStorage.removeItem('access_token');

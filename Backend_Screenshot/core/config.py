@@ -27,10 +27,18 @@ class Settings(BaseSettings):
     headless: bool = True
 
     # ── Paths (relative to Backend_Screenshot/) ───────────────────────────────
-    # Override INPUT_IMAGES_DIR=/data/input_images if using a Render persistent disk.
+    # Override these with absolute paths when using a Render persistent disk.
+    # Example: SCREENSHOTS_DIR=/app/data/screenshots
     screenshots_dir: str = "screenshots"
     input_images_dir: str = "../input_images"
     ppt_assets_dir: str = "ppt_assets"
+    processed_outputs_dir: str = "processed_outputs"   # CRM processed CSV files
+
+    # ── CORS ──────────────────────────────────────────────────────────────────
+    # Comma-separated list of allowed origins in production.
+    # Example: "https://your-app.netlify.app,https://admin.example.com"
+    # Leave empty to allow all origins (dev only).
+    allowed_origins: str = ""
 
     # ── App ───────────────────────────────────────────────────────────────────
     app_env: str = "development"   # "development" | "production"

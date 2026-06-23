@@ -10,151 +10,439 @@
 
     body {
       min-height: 100vh;
-      background: #080c1a;
+      background: #060a18;
       display: flex;
-      align-items: center;
-      justify-content: center;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       color: #e3e3e8;
+      overflow: hidden;
     }
 
-    .login-card {
-      background: #0d1228;
-      border: 1px solid rgba(99,102,241,0.18);
-      border-radius: 16px;
-      padding: 2.5rem 2rem;
-      width: 100%;
-      max-width: 400px;
+    /* ── Background ── */
+    .bg-canvas {
+      position: fixed; inset: 0; z-index: 0;
+      background: #070b1a;
+      background-image: radial-gradient(circle, rgba(99,102,241,0.12) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    .bg-canvas::before {
+      content: '';
+      position: absolute;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 65%);
+      top: -150px; left: -150px;
+    }
+    .bg-canvas::after {
+      content: '';
+      position: absolute;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(56,189,248,0.07) 0%, transparent 65%);
+      bottom: -100px; right: -100px;
+    }
+    /* Grid dots overlay on left panel */
+    .bg-grid {
+      position: absolute; inset: 0; z-index: 2;
+      background-image: radial-gradient(circle, rgba(56,189,248,0.22) 1.5px, transparent 1.5px);
+      background-size: 32px 32px;
+      pointer-events: none;
     }
 
-    .logo {
+    /* ── Layout ── */
+    .layout {
+      position: relative; z-index: 1;
+      display: flex;
+      width: 100%; min-height: 100vh;
+    }
+
+    /* ── LEFT PANEL ── */
+    .left-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 60px 80px;
+      position: relative;
+      background: url('brain-pg.png') center center / cover no-repeat;
+      overflow: hidden;
+    }
+    /* Dark overlay so text is readable */
+    .left-panel::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(
+        135deg,
+        rgba(6,10,24,0.75) 0%,
+        rgba(6,10,24,0.45) 50%,
+        rgba(6,10,24,0.75) 100%
+      );
+      z-index: 0;
+    }
+    .left-panel > * { position: relative; z-index: 3; }
+    .left-panel > .bg-grid { z-index: 2; }
+
+    .brand {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 2rem;
-      justify-content: center;
+      gap: 14px;
+      margin-bottom: 64px;
     }
-    .logo-icon {
-      width: 40px; height: 40px;
-      background: rgba(99,102,241,0.15);
+    .brand-icon {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, #0ea5e9, #6366f1);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; color: #fff;
+      box-shadow: 0 8px 24px rgba(56,189,248,0.4), 0 0 40px rgba(56,189,248,0.15);
+    }
+    .brand-name { font-size: 1.35rem; font-weight: 700; color: #e3e3e8; letter-spacing: -0.3px; }
+    .brand-sub  { font-size: 0.75rem; color: #6b7280; margin-top: 2px; }
+
+    .left-headline {
+      font-size: 2.8rem;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.5px;
+      margin-bottom: 20px;
+      color: #f1f1f5;
+    }
+    .left-headline span {
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 20px rgba(56,189,248,0.4));
+    }
+
+    .left-desc {
+      font-size: 0.95rem;
+      color: #6b7280;
+      line-height: 1.7;
+      max-width: 420px;
+      margin-bottom: 52px;
+    }
+
+    .feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .feature-icon {
+      width: 38px; height: 38px;
+      background: rgba(14,165,233,0.08);
+      border: 1px solid rgba(56,189,248,0.25);
       border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.2rem; color: #6366f1;
+      color: #38bdf8;
+      font-size: 1rem;
+      flex-shrink: 0;
+      box-shadow: 0 0 12px rgba(56,189,248,0.1);
     }
-    .logo-name { font-size: 1.2rem; font-weight: 600; color: #e3e3e8; }
-    .logo-sub  { font-size: 0.72rem; color: #6b7280; }
+    .feature-text { font-size: 0.88rem; color: #9ca3af; }
+    .feature-text strong { color: #d1d5db; display: block; margin-bottom: 1px; }
 
-    h1 { font-size: 1.3rem; font-weight: 600; margin-bottom: 0.25rem; text-align: center; }
-    .subtitle { font-size: 0.82rem; color: #6b7280; text-align: center; margin-bottom: 1.75rem; }
+    .divider-v {
+      width: 1px;
+      background: linear-gradient(to bottom, transparent, rgba(99,102,241,0.2) 20%, rgba(99,102,241,0.2) 80%, transparent);
+      margin: 40px 0;
+    }
 
-    .form-group { margin-bottom: 1rem; }
-    label { display: block; font-size: 0.8rem; color: #9ca3af; margin-bottom: 6px; }
-
-    .input-wrap {
+    /* ── RIGHT PANEL ── */
+    .right-panel {
+      width: 480px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 48px;
+      background: rgba(10,14,30,0.75);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-left: 1px solid rgba(99,102,241,0.15);
       position: relative;
     }
-    .input-wrap i {
-      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-      color: #4b5563; font-size: 1rem;
+
+    .login-box {
+      width: 100%;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(99,102,241,0.15);
+      border-radius: 20px;
+      padding: 36px 32px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
     }
+
+    .login-title {
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: #f1f1f5;
+      margin-bottom: 6px;
+      letter-spacing: -0.3px;
+    }
+    .login-sub {
+      font-size: 0.83rem;
+      color: #4b5563;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid rgba(99,102,241,0.1);
+    }
+
+    .form-group { margin-bottom: 16px; }
+    label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #6b7280;
+      margin-bottom: 7px;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+
+    .input-wrap { position: relative; }
+    .input-wrap i {
+      position: absolute; left: 14px; top: 50%;
+      transform: translateY(-50%);
+      color: #374151; font-size: 1rem;
+      pointer-events: none;
+      transition: color 0.2s;
+    }
+    .input-wrap:focus-within i { color: #6366f1; }
+
     input {
       width: 100%;
-      background: #111830;
-      border: 1px solid rgba(99,102,241,0.2);
-      border-radius: 8px;
-      padding: 10px 12px 10px 36px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 13px 14px 13px 42px;
       color: #e3e3e8;
       font-size: 0.9rem;
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
     }
-    input:focus { border-color: rgba(99,102,241,0.6); }
-    input::placeholder { color: #4b5563; }
+    input:focus {
+      border-color: rgba(99,102,241,0.5);
+      background: rgba(99,102,241,0.05);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.08);
+    }
+    input::placeholder { color: #2d3748; }
+
+    /* Password toggle */
+    .pwd-toggle {
+      position: absolute; right: 14px; top: 50%;
+      transform: translateY(-50%);
+      color: #4b5563; font-size: 1rem;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .pwd-toggle:hover { color: #818cf8; }
 
     .btn-login {
       width: 100%;
-      padding: 11px;
-      background: #6366f1;
+      padding: 13px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
       color: #fff;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       font-size: 0.95rem;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
-      margin-top: 0.5rem;
-      transition: background 0.2s, opacity 0.2s;
+      margin-top: 8px;
+      transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(99,102,241,0.35);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      letter-spacing: 0.2px;
     }
-    .btn-login:hover   { background: #5254cc; }
-    .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-login:hover:not(:disabled) {
+      opacity: 0.92;
+      box-shadow: 0 6px 28px rgba(99,102,241,0.5);
+      transform: translateY(-1px);
+    }
+    .btn-login:active:not(:disabled) { transform: translateY(0); }
+    .btn-login:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+    /* Spinner */
+    .spinner {
+      display: none;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    .btn-login.loading .spinner { display: block; }
+    .btn-login.loading .btn-label { opacity: 0.7; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     .error-msg {
-      background: rgba(239,68,68,0.1);
-      border: 1px solid rgba(239,68,68,0.3);
-      border-radius: 8px;
-      padding: 10px 12px;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 10px;
+      padding: 12px 14px;
       color: #f87171;
       font-size: 0.82rem;
-      margin-top: 1rem;
+      margin-top: 14px;
       display: none;
-    }
-    .error-msg.show { display: block; }
-
-    .role-badge {
-      display: inline-flex;
       align-items: center;
-      gap: 4px;
-      font-size: 0.7rem;
-      padding: 2px 8px;
-      border-radius: 20px;
-      margin-top: 1.25rem;
-      width: 100%;
+      gap: 8px;
+    }
+    .error-msg.show { display: flex; }
+
+    .security-badge {
+      display: flex;
+      align-items: center;
       justify-content: center;
-      color: #6b7280;
+      gap: 6px;
+      margin-top: 28px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(99,102,241,0.1);
+      font-size: 0.75rem;
+      color: #374151;
+    }
+    .security-badge i { color: #4b5563; font-size: 0.85rem; }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .left-panel { display: none; }
+      .right-panel {
+        width: 100%;
+        border-left: none;
+        background: rgba(10,14,30,0.6);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+      }
     }
   </style>
 </head>
 <body>
 
-<div class="login-card">
-  <div class="logo">
-    <div class="logo-icon"><i class='bx bx-film'></i></div>
-    <div>
-      <div class="logo-name">AdVision AI</div>
-      <div class="logo-sub">Ad Injector Platform</div>
-    </div>
-  </div>
+<div class="bg-canvas"></div>
+<canvas id="wordCanvas" style="position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.45;"></canvas>
+<script>
+(function(){
+  const words = [
+    'CTR','VCR','CPM','CPC','ROAS','Ad Slot','Creative','Impressions',
+    'Viewability','Campaign','Publisher','Targeting','Analytics','Revenue',
+    'Display','Banner','IAB','Digital','Media','Injection','Placement',
+    'Report','Frequency','Reach','Engagement','Conversion','Programmatic',
+    'AdTech','Pixel','Tag','Macro','VAST','VPAID','DSP','SSP','DMP',
+    'Brand','Audience','Segment','Retarget','Funnel','KPI','ROI'
+  ];
+  const canvas = document.getElementById('wordCanvas');
+  function draw(){
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    words.forEach(w => {
+      const x    = Math.random() * canvas.width;
+      const y    = Math.random() * canvas.height;
+      const size = 10 + Math.random() * 10;
+      const alpha= 0.06 + Math.random() * 0.1;
+      ctx.font = `${Math.random()>0.5?'600':'400'} ${size}px -apple-system,sans-serif`;
+      ctx.fillStyle = `rgba(${Math.random()>0.5?'99,102,241':'56,189,248'},${alpha})`;
+      ctx.fillText(w, x, y);
+    });
+  }
+  draw();
+  window.addEventListener('resize', draw);
+})();
+</script>
 
-  <h1>Welcome back</h1>
-  <p class="subtitle">Sign in to your account</p>
+<div class="layout">
 
-  <form id="loginForm">
-    <div class="form-group">
-      <label for="username">Username</label>
-      <div class="input-wrap">
-        <i class='bx bx-user'></i>
-        <input type="text" id="username" placeholder="Enter username" autocomplete="username" required />
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+    <div class="bg-grid"></div>
+    <div class="brand">
+      <div class="brand-icon"><i class='bx bx-film'></i></div>
+      <div>
+        <div class="brand-name">AdVision AI</div>
+        <div class="brand-sub">Ad Injector Platform</div>
       </div>
     </div>
 
-    <div class="form-group">
-      <label for="password">Password</label>
-      <div class="input-wrap">
-        <i class='bx bx-lock-alt'></i>
-        <input type="password" id="password" placeholder="Enter password" autocomplete="current-password" required />
+    <h1 class="left-headline">Intelligent Ad<br>Placement <span>Powered<br>by AI</span></h1>
+    <p class="left-desc">
+      Automate your ad injection workflow with precision. Detect real ad slots,
+      match creatives by device, and generate campaign reports — all in one platform.
+    </p>
+
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-icon"><i class='bx bx-target-lock'></i></div>
+        <div class="feature-text">
+          <strong>Smart Ad Detection</strong>
+          IAB-standard slot detection with confidence scoring
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon"><i class='bx bx-bar-chart-alt-2'></i></div>
+        <div class="feature-text">
+          <strong>CRM Excel Processor</strong>
+          Auto-generate CTR, VCR & Viewability reports
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon"><i class='bx bx-shield-quarter'></i></div>
+        <div class="feature-text">
+          <strong>Role-Based Access</strong>
+          Secure access control per user and per page
+        </div>
       </div>
     </div>
-
-    <button type="submit" class="btn-login" id="loginBtn">
-      <span id="btnText">Sign In</span>
-    </button>
-
-    <div class="error-msg" id="errorMsg"></div>
-  </form>
-
-  <div class="role-badge">
-    <i class='bx bx-shield-quarter'></i>
-    Secured — Role-Based Access Control
   </div>
+
+  <div class="divider-v"></div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+    <div class="login-box">
+
+      <h2 class="login-title">Welcome back</h2>
+      <p class="login-sub">Sign in to access your dashboard</p>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <div class="input-wrap">
+            <i class='bx bx-user'></i>
+            <input type="text" id="username" placeholder="Enter your username"
+                   autocomplete="username" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <div class="input-wrap">
+            <i class='bx bx-lock-alt'></i>
+            <input type="password" id="password" placeholder="Enter your password"
+                   autocomplete="current-password" required />
+            <i class='bx bx-hide pwd-toggle' id="pwdToggle" title="Show/hide password"></i>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-login" id="loginBtn">
+          <div class="spinner"></div>
+          <span class="btn-label">Sign In</span>
+          <i class='bx bx-right-arrow-alt' id="btnArrow"></i>
+        </button>
+
+        <div class="error-msg" id="errorMsg">
+          <i class='bx bx-error-circle'></i>
+          <span id="errorText"></span>
+        </div>
+      </form>
+
+      <div class="security-badge">
+        <i class='bx bx-lock'></i>
+        Secured · Role-Based Access Control · JWT Auth
+      </div>
+
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -162,22 +450,46 @@
     ? 'http://127.0.0.1:8001'
     : window.location.origin;
 
-  // Already logged in? Go to dashboard
+  // Already logged in? Redirect to correct page based on role
   if (localStorage.getItem('access_token')) {
-    window.location.href = 'index.html';
+    const pagesRaw = localStorage.getItem('allowed_pages');
+    const allowedPages = pagesRaw ? JSON.parse(pagesRaw) : null;
+    if (allowedPages === null || allowedPages === undefined) {
+      window.location.href = 'index.html';
+    } else {
+      const pageMap = {
+        scanner:      'index.html',
+        crm_excel:    'crm-excel.html',
+        ppt_store:    'ppt-store.html',
+        final_report: 'final-report.html',
+        reach_report: 'reach-report.html',
+      };
+      const first = allowedPages[0];
+      window.location.href = first ? (pageMap[first] || 'index.html') : 'login.html';
+    }
   }
+
+  // Password toggle
+  document.getElementById('pwdToggle').addEventListener('click', function() {
+    const pwd = document.getElementById('password');
+    const isHidden = pwd.type === 'password';
+    pwd.type = isHidden ? 'text' : 'password';
+    this.className = isHidden ? 'bx bx-show pwd-toggle' : 'bx bx-hide pwd-toggle';
+  });
 
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn     = document.getElementById('loginBtn');
     const errEl   = document.getElementById('errorMsg');
-    const btnText = document.getElementById('btnText');
+    const errText = document.getElementById('errorText');
+    const arrow   = document.getElementById('btnArrow');
 
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
 
-    btn.disabled  = true;
-    btnText.textContent = 'Signing in...';
+    btn.disabled = true;
+    btn.classList.add('loading');
+    arrow.style.display = 'none';
     errEl.classList.remove('show');
 
     try {
@@ -193,17 +505,16 @@
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || 'Login failed');
+        throw new Error(data.detail || 'Login failed. Please check your credentials.');
       }
 
       const data = await res.json();
       localStorage.setItem('access_token',  data.access_token);
       localStorage.setItem('user_role',     data.role);
       localStorage.setItem('username',      data.username);
-      // null means super_admin (all pages); store as JSON string
       localStorage.setItem('allowed_pages', JSON.stringify(data.allowed_pages));
 
-      // Redirect: super_admin → index.html; restricted user → first allowed page
+      // Redirect based on role
       if (data.allowed_pages === null || data.allowed_pages === undefined) {
         window.location.href = 'index.html';
       } else {
@@ -212,16 +523,18 @@
           crm_excel:    'crm-excel.html',
           ppt_store:    'ppt-store.html',
           final_report: 'final-report.html',
+          reach_report: 'reach-report.html',
         };
         const first = data.allowed_pages[0];
         window.location.href = first ? (pageMap[first] || 'index.html') : 'login.html';
       }
 
     } catch (err) {
-      errEl.textContent = err.message;
+      errText.textContent = err.message;
       errEl.classList.add('show');
-      btn.disabled  = false;
-      btnText.textContent = 'Sign In';
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      arrow.style.display = '';
     }
   });
 </script>

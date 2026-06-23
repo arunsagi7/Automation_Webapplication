@@ -19,20 +19,21 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from database.db import engine, SessionLocal, Base
+from database.crm_db import crm_engine, CrmSessionLocal as SessionLocal, CrmBase
 import models.user
 from models.user import User
 from core.security import hash_password
 
-Base.metadata.create_all(bind=engine)
+CrmBase.metadata.create_all(bind=crm_engine)
 
-VALID_PAGES = ["scanner", "crm_excel", "ppt_store", "final_report"]
+VALID_PAGES = ["scanner", "crm_excel", "ppt_store", "final_report", "reach_report"]
 
 PAGE_LABELS = {
     "scanner":      "Ad Scanner",
     "crm_excel":    "CRM Excel Processor",
     "ppt_store":    "PPT Store",
     "final_report": "Final Report",
+    "reach_report": "Reach Report",
 }
 
 def create_admin(username: str, password: str, pages: list, email: str = ""):

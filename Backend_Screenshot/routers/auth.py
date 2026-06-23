@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 from core.deps import get_current_user
 from core.security import create_access_token, verify_password
-from database.db import SessionLocal
+from database.crm_db import CrmSessionLocal as SessionLocal
 from models.user import User
 
 router = APIRouter(prefix="/auth", tags=["Auth"])

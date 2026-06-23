@@ -1,177 +1,196 @@
 # Creative Scanner Pro — Project Analysis
 
-**Date:** 2026-06-16  
-**Codebase:** ~100 files across Backend_Screenshot/ and Frontend_Screenshot/
+**Date:** June 23, 2026 (updated)  
+**Codebase size:** ~11,000 lines of Python (backend) + ~800 lines of vanilla JS (frontend)
 
 ---
 
-## What the Project Does
+## What the project does
 
-**Creative Scanner Pro** (branded "AdVision AI" in the frontend) is an **ad verification and simulation platform**. Given a list of URLs and creative images, it:
+**Creative Scanner Pro** (also branded "AdVision AI" in the frontend) is an **ad verification and simulation platform**. Given a list of URLs and your creative image files, it:
 
-1. Opens each URL in a headless Chromium browser (Playwright)
-2. Detects ad slots using DOM/CSS heuristics, GPT API signals, and network interception
-3. Injects your creative image into the best-matching slot
-4. Captures a before/after screenshot
-5. Exports branded PowerPoint reports
+1. Launches a headless Chromium browser via Playwright
+2. Detects ad slots on each page (DOM selectors → GPT API → Claude Vision AI fallback)
+3. Injects your creatives into those slots with pixel-accurate positioning
+4. Takes full-page before/after screenshots
+5. Exports branded PowerPoint reports for client presentations
+6. Supports both desktop (1920×1080) and mobile (390×844 iPhone) viewports
 
-The platform also bundles a **CRM Excel Processor** (CTR/VCR/Viewability calculations) and a **Final Report generator** (Excel file splitting by language/city), making it a multi-tool ad-ops suite.
+There is also a **CRM Excel Processor** (`/crm`) and a **Final Report** generator (`/final-report`) — separate feature domains that process campaign performance data (impressions, clicks, CTR, viewability) and produce split Excel reports per language/city.
 
 ---
 
-## Architecture
+## Project Structure
 
 ```
-$Screenshot/
-├── Backend_Screenshot/   ← FastAPI (Python 3.11+)
-│   ├── core/             ← config, auth, security, logging, paths
-│   ├── routers/          ← one file per feature domain
-│   ├── services/         ← all business logic (no HTTP)
-│   ├── models/           ← SQLAlchemy ORM
-│   ├── schemas/          ← Pydantic request/response types
-│   ├── database/         ← two DB engines (scanner.db + ctr_db)
-│   └── migrations/       ← Alembic versioned migrations
-└── Frontend_Screenshot/  ← Vanilla JS (ES modules, no bundler)
-    └── src/              ← Application.js orchestrator + modules
+$Screenshot/                       ← git root
+├── Backend_Screenshot/            ← Python FastAPI backend (main codebase)
+│   ├── main.py                    ← app factory, middleware, routers
+│   ├── core/                      ← config, auth, logging, paths
+│   ├── routers/                   ← one file per feature (scan, crm, auth, users…)
+│   ├── services/                  ← all business logic (browser, ad_detector, ppt…)
+│   ├── models/                    ← SQLAlchemy ORM models
+│   ├── schemas/                   ← Pydantic request/response schemas
+│   ├── database/                  ← two DB engines (scanner_db + ctr_db)
+│   └── migrations/                ← Alembic schema versions
+├── Frontend_Screenshot/           ← Vanilla JS dashboard (no bundler)
+│   ├── index.html / style.css     ← main UI
+│   ├── src/modules/               ← Application.js, StateManager, ResultsRenderer…
+│   └── src/core/                  ← DOM helpers, EventEmitter, HTTPClient, Logger
+├── input_images/                  ← desktop/ and mobile/ creative PNGs
+└── screenshots/                   ← generated output (gitignored)
 ```
 
-**Two databases:** `scanner.db` (scan results, users) and `ctr_db` (CRM data, screenshots). Both are SQLite locally and swap to PostgreSQL via `DATABASE_URL`/`CRM_DATABASE_URL` env vars.
+---
 
-**Auth:** Dual-mode — JWT Bearer tokens (role-based, preferred) or `X-API-Key` header (legacy). Roles: `super_admin` (full access) and `admin` (page-restricted via JSON column).
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend framework | FastAPI 0.111 + Uvicorn |
+| Browser automation | Playwright 1.58 (Chromium, stealth mode) |
+| Image processing | Pillow 12 |
+| Report generation | python-pptx, openpyxl, pandas |
+| AI detection fallback | Anthropic Claude Vision (haiku) |
+| Database ORM | SQLAlchemy 2.0 + Alembic |
+| Databases | SQLite (dev) / PostgreSQL (prod) |
+| Authentication | JWT (python-jose) + X-API-Key |
+| Frontend | Vanilla JS ES modules — no React, no bundler |
 
 ---
 
-## Core Engine — How Ad Injection Works
+## Feature Inventory
 
-### Two-Pass Strategy
+### Core Scanner
+- `POST /process` — streams NDJSON progress events while scanning URLs concurrently
+- `GET /results` / `DELETE /results/{id}` — result management
+- `POST /results/export-ppt` — PowerPoint export
+- `POST /upload-creatives` / `GET /creatives` / `DELETE /delete-creative` — creative management
 
-**Pass 1 — In-slot injection:**  
-DOM scanner + network interception find real ad slots. A multi-factor scoring algorithm matches the best creative to each slot (0.0–1.0 score). The creative is overlaid on `document.body` as an absolutely-positioned div — placed *outside* any ad-network DOM subtree so GPT refresh cycles can't overwrite it.
+### PPT Store
+- Upload/manage PPTX templates
+- Generate and save branded reports
 
-**Pass 2 — Natural placement fallback:**  
-If no matching slots are found, three sub-strategies are tried in order:
-1. Structural DOM (find header bottom or sidebar gap — free and instant)
-2. Claude Vision (AI picks the best position from a screenshot — ~$0.001/call)
-3. Native article insertion (inserts between paragraphs as a "Sponsored" block)
+### CRM Excel Processor
+- Upload `.xlsx`/`.csv` campaign data
+- Apply CTR/VCR/Viewability rules (stored in DB)
+- Uses "yesterday memory" (DB-persisted) for delta comparisons
+- Returns processed `.xlsx`
 
-### Creative Matching Algorithm
+### Final Report
+- Split campaign Excel files by language/city (from reference DBs)
+- QC workflow: mark reports as `in_qc`, record verified metrics
+- Download individual output files
 
-| Factor | Weight |
-|--------|--------|
-| Aspect ratio match | 40% |
-| Size proximity | 30% |
-| Orientation (H/V) | 20% |
-| IAB standard size bonus | 10% |
+### Reach Report
+- Separate reach data generation and parsing pipeline
 
-Minimum score to qualify: 0.40.
-
-### Anti-Bot / Reliability Measures
-- `playwright-stealth` + custom `navigator.webdriver` masking init script
-- Navigation retry with exponential backoff (3 attempts)
-- Early Cloudflare/reCAPTCHA detection — skips blocked pages rather than hanging
-- Consent banner automation (OneTrust, Quantcast, Cookiebot, generic CMPs)
-- CSP header stripping so injection JS is never blocked
-
----
-
-## Strengths
-
-**Clean architecture.** Routers contain zero business logic — all of it lives in `services/`. Pydantic schemas type every request/response. `core/paths.py` centralises all filesystem paths. `core/config.py` is a single Pydantic Settings class — no scattered `os.getenv()` calls in most files.
-
-**Good documentation.** README, ARCHITECTURE.md, CORE_ENGINE.md, and per-file docstrings are thorough and accurate.
-
-**Robust scan pipeline.** The two-pass strategy with three-level fallback means nearly every URL produces a result regardless of how the site serves ads. The overlay-on-body approach specifically solves the problem of GPT re-firing and overwriting injected creatives.
-
-**Streaming API.** The `/process` endpoint returns NDJSON — the frontend shows real-time progress per URL without polling.
-
-**Alembic migrations.** Proper version-controlled schema migration exists (3 migration files). A startup guard runs `ALTER TABLE … ADD COLUMN IF NOT EXISTS` as a backward-compat safety net.
-
-**Security basics.** Passwords use bcrypt directly, JWT tokens are HS256, path traversal is blocked on the delete-creative endpoint, and API key auth can be disabled for dev.
+### User Management
+- `super_admin` and `admin` roles
+- Per-user page access control (`allowed_pages` JSON column)
+- JWT login/logout flow
 
 ---
 
-## Issues and Technical Debt
+## How Ad Detection Works (3-Level Pipeline)
 
-### High Priority
+```
+Level 1 — DOM selectors
+  60+ CSS selectors for Google/DFP, AdSense, common ad class/ID patterns,
+  news site patterns, and third-party tags.
+  Uses MutationObserver to catch dynamically injected slots.
 
-**1. `browser.py` is 2,350 lines — a monolith.**  
-This single file contains: stealth scripts, navigation helpers, popup handlers, security detection, scroll logic, screenshot logic, three injection strategies, two JS blobs (one dead), address bar rendering, and the main orchestrator. It is very difficult to unit-test or maintain. It should be split into at least: `browser_nav.py`, `browser_inject.py`, `browser_screenshot.py`, and `browser_orchestrator.py`.
+        ↓  (if < N slots found)
 
-**2. Hardcoded JWT secret default.**  
-`core/security.py` line 14:
+Level 2 — Claude Vision AI  (vision_detector.py)
+  Sends page screenshot to Claude, asks it to identify all ad regions
+  with bounding boxes. Returns slot dicts compatible with the pipeline.
+  Only runs when ANTHROPIC_API_KEY is set (~$0.001/call).
+
+        ↓  (if still no slots)
+
+Level 3 — Smart Placement  (smart_placement.py)
+  3a. Structural DOM  — finds header bottom / right sidebar gap
+  3b. Claude Vision   — AI picks single best position
+  3c. Native Article  — inserts "Sponsored" block between paragraphs
+```
+
+---
+
+## Authentication Flow
+
+Two parallel auth methods are accepted on every protected endpoint:
+
+1. **Bearer JWT** — issued by `POST /auth/login`, role-aware
+2. **X-API-Key header** — legacy/service-to-service key from `.env`
+3. **Dev open mode** — if `API_KEY` is blank and `APP_ENV ≠ production`, all requests pass
+
+---
+
+## Issues & Recommendations
+
+### 🔴 Security
+
+**CORS is fully open**
 ```python
-JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production-supersecret-key")
+# main.py line 53
+allow_origins=["*"],   # Lock this to your domain in production
 ```
-If `JWT_SECRET` is not set, all environments use the same public default. This should raise a `ValueError` in production (`app_env == "production"`) rather than silently accepting the insecure default.
+Even the comment warns about this. Before deploying, set `allow_origins` to your actual frontend domain (e.g. `["https://your-app.render.com"]`).
 
-**3. CORS is open.**  
-`main.py` has `allow_origins=["*"]` with a comment saying "Lock this to your domain in production." This is never enforced programmatically. Conditional logic based on `settings.app_env` should restrict origins in production.
-
-**4. Dead code: `_PASS1_PLACEMENT_JS_OLD`.**  
-Lines ~1236–1441 of `browser.py` are a 205-line JavaScript blob explicitly commented "kept for reference, not used." This should be deleted (it's in git history if needed).
-
-### Medium Priority
-
-**5. `@app.on_event("startup")` is deprecated.**  
-FastAPI has deprecated event decorators since v0.93. The startup block should be replaced with an `@asynccontextmanager` lifespan function. The deprecation warning will become an error in a future FastAPI release.
-
-**6. Startup migration guard mixes with Alembic.**  
-The raw `ALTER TABLE` guard in `startup_event` duplicates what Alembic migration `0001` already does. The comment says "Replace this with Alembic once you adopt proper migrations" — but Alembic is already adopted. The guard should be removed and `alembic upgrade head` should be the sole migration mechanism.
-
-**7. Scattered standalone test files.**  
-`test_api.py`, `test_scan.py`, `test_db.py`, `test_comprehensive.py` sit in `Backend_Screenshot/` root outside the `tests/` folder and aren't collected by pytest by default. The formal test suite in `tests/` has only 5 test cases — very low coverage for the core scan/injection logic.
-
-**8. `browser.py` bypasses `core/paths.py` for the screenshots directory.**  
-Line 1571: `os.makedirs("screenshots", exist_ok=True)` and `f"screenshots/{domain}.png"` hardcode a relative path. All other path construction uses `get_paths()` from `core/paths.py`. This creates inconsistency and will break if the working directory changes.
-
-**9. `DEFAULT_MAX_CONCURRENCY` reads `os.getenv` directly.**  
-`browser.py` line 84: `int(os.getenv("ENGINE_CONCURRENCY", "50"))` bypasses `get_settings()`. The settings object already has `engine_concurrency` and is the correct source.
-
-### Low Priority
-
-**10. Legacy frontend files not cleaned up.**  
-`Frontend_Screenshot/src/index.js` and `src/services/apiService.js` are documented as "legacy" and "no longer loaded," but they remain in the repo. `ARCHITECTURE.md` notes they "can be deleted once the module system is verified complete" — that verification appears complete.
-
-**11. Loose migration scripts at project root.**  
-`migrate_app_url_db.py`, `migrate_city_db.py`, `reference_db_city_patch.py` are one-off scripts sitting at the repo root. They should either be converted to Alembic migrations or moved to a `scripts/` folder and documented.
-
-**12. `backend_log.txt` committed to the repo.**  
-Runtime log files should not be in version control. It should be added to `.gitignore`.
-
-**13. `PPT_format/extracted/` raw XML in repo.**  
-This looks like a reference extraction of a PPTX template. If it's used by `ppt_style_extractor.py`, the original `.pptx` is sufficient; the extracted XML is redundant and adds noise.
+**Dev open mode in production**
+If `API_KEY` is accidentally left blank and `APP_ENV` is not explicitly set to `"production"`, all endpoints are unauthenticated. Make `API_KEY` required in production via config validation.
 
 ---
 
-## Recommendations (Priority Order)
+### 🟡 Code Quality
 
-1. **Fix the JWT secret** — raise an error in production if `JWT_SECRET` is the default value.
-2. **Lock CORS in production** — add a conditional in `main.py` based on `settings.app_env`.
-3. **Split `browser.py`** — even a two-file split (helpers vs. orchestrator) would significantly improve maintainability.
-4. **Delete dead code** — remove `_PASS1_PLACEMENT_JS_OLD` and the legacy frontend files.
-5. **Replace `@app.on_event`** — migrate to lifespan context manager.
-6. **Remove the startup ALTER TABLE guard** — rely on Alembic exclusively.
-7. **Use `get_paths()` in `browser.py`** — consistent path handling across the codebase.
-8. **Move test files into `tests/`** and add test coverage for the injection pipeline.
-9. **Add `backend_log.txt` to `.gitignore`**.
+**Two migration strategies running in parallel**
+`main.py` startup event runs raw `ALTER TABLE` guards *and* Alembic is also configured. The comment says "Replace this with Alembic" but the guard is still active. Pick one — Alembic — and remove the inline SQL guards. This causes confusion about which is the source of truth.
 
----
+**`browser.py` is 2,406 lines**
+The core Playwright orchestrator is too large. It handles navigation, popup dismissal, stealth init, ad injection, screenshot capture, and concurrency management all in one file. Breaking it into `navigation.py`, `injection.py`, and `concurrency.py` would improve readability and testability.
 
-## Dependency Snapshot
+**`report_generator.py` is 1,157 lines**
+Similarly large. Could be split by output type (Excel/PPT/reach).
 
-| Category | Library | Version |
-|----------|---------|---------|
-| API | FastAPI, Uvicorn | 0.111.0, 0.34.3 |
-| Browser | Playwright | 1.58.0 |
-| Database | SQLAlchemy, Alembic | 2.0.49, 1.13.1 |
-| Auth | python-jose, bcrypt | 3.3.0, 4.2.1 |
-| Reports | python-pptx, openpyxl, pandas | 1.0.2, 3.1.3, 2.2.2 |
-| AI | Anthropic (optional) | not pinned |
+**`datetime.utcnow` is deprecated (Python 3.12+)**
+```python
+# models/screenshot.py line 17
+created_at = Column(DateTime, default=datetime.utcnow)
+```
+Replace with `datetime.now(timezone.utc)` to avoid deprecation warnings and future breakage.
 
-All dependencies are pinned, which is good for reproducibility.
+**Hardcoded `os.path.join(__file__)` in services**
+`ppt_exporter.py` and several other service files compute `_BACKEND_ROOT` from `__file__` instead of using the `core/paths.py` single source of truth. The architecture doc says paths should come from `core/paths.py`, but it isn't consistently followed.
+
+**Legacy `src/index.js` still present**
+The frontend has two entry points: the old monolithic `src/index.js` and the new modular `src/main.js`. The ARCHITECTURE.md says `index.js` "can be deleted once the module system is verified complete." It should be deleted to avoid confusion.
 
 ---
 
-## Summary
+### 🟢 Strengths
 
-This is a well-architected, production-grade tool with a clever two-pass injection engine and solid documentation. The main risks are the open JWT secret default, the open CORS config, and the `browser.py` monolith. Addressing those three would meaningfully improve security and maintainability without requiring a major refactor.
+- **Clean router/service split** — routers contain no business logic; all logic is in `services/`
+- **Pydantic settings** — all config from environment variables, no hardcoded secrets
+- **Streaming NDJSON** — the scan endpoint streams progress events, good UX for long-running jobs
+- **Graceful fallbacks** — both `playwright_stealth` and `anthropic` are optional imports; the app works without them
+- **IAB size scoring** — image matching uses proper aspect ratio + size scoring against standard IAB sizes
+- **Two-database design** — scanner results and CRM/user data are cleanly separated
+
+---
+
+## Priority Action Items
+
+| Priority | Issue | File |
+|---|---|---|
+| 🔴 High | Set `allow_origins` to specific domain before prod deploy | `main.py:53` |
+| 🔴 High | Make `API_KEY` required in production config | `core/config.py` |
+| 🟡 Medium | Remove inline `ALTER TABLE` guards, use Alembic only | `main.py:108–144` |
+| 🟡 Medium | Replace `datetime.utcnow` with timezone-aware version | `models/screenshot.py:17` |
+| 🟡 Medium | Route all path resolution through `core/paths.py` | `services/ppt_exporter.py` etc. |
+| 🟢 Low | Delete legacy `src/index.js` | `Frontend_Screenshot/src/index.js` |
+| 🟢 Low | Split `browser.py` (~2,400 lines) into smaller modules | `services/browser.py` |
+| 🟢 Low | Gitignore generated Excel files in `final_report_outputs/` (100+ files committed) | `.gitignore` |
+| 🟢 Low | Migrate `@app.on_event("startup")` to lifespan context manager (deprecated in FastAPI) | `main.py` |
+| 🟢 Low | Consolidate nested git repos — `Backend_Screenshot/` has its own `.git` separate from the root repo | repo structure |

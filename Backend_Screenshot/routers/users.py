@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from core.deps import require_super_admin
 from core.security import hash_password
-from database.db import SessionLocal
+from database.crm_db import CrmSessionLocal as SessionLocal
 from models.user import User
 
 router = APIRouter(prefix="/users", tags=["User Management"])
@@ -24,7 +24,7 @@ router = APIRouter(prefix="/users", tags=["User Management"])
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
-ALL_PAGES = ["scanner", "crm_excel", "ppt_store", "final_report"]
+ALL_PAGES = ["scanner", "crm_excel", "ppt_store", "final_report", "reach_report"]
 
 
 class CreateUserRequest(BaseModel):

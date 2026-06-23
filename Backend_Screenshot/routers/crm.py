@@ -29,24 +29,29 @@ from datetime import datetime, timezone
 
 import pandas as pd
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from sqlalchemy.exc import IntegrityError
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
+from core.config import get_settings
 from database.crm_db import get_crm_db
 from models.crm import CampaignRule as CampaignRuleModel
 from models.crm import GlobalSetting, ProcessedFile
 from schemas.crm import CampaignRule, GlobalSettings
-from services.crm_excel_writer import build_excel
 from services.crm_memory import load_yesterday_memory, save_today_snapshot
-from services.crm_processor import process_rows
+from services.crm_processor import process_rows, OUTPUT_COLUMNS
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/crm", tags=["crm"])
 
-# Directory where processed Excel files are persisted for re-download
-_PROCESSED_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "processed_outputs",
+# Directory where processed CSV files are persisted for re-download.
+# Configurable via PROCESSED_OUTPUTS_DIR env var — set to a Render persistent
+# disk path (e.g. /app/data/processed_outputs) so files survive restarts.
+_settings = get_settings()
+_pd_setting = _settings.processed_outputs_dir
+_PROCESSED_DIR = (
+    _pd_setting if os.path.isabs(_pd_setting)
+    else os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), _pd_setting)
 )
 os.makedirs(_PROCESSED_DIR, exist_ok=True)
 
@@ -226,6 +231,7 @@ def _load_db_rules(db: Session) -> dict:
             if r.campaign_name:
                 rules_dict[r.campaign_name.strip().lower()] = entry
     except Exception as e:
+        db.rollback()   # reset session so subsequent writes still work
         logger.warning("Could not load campaign_rules from DB: %s", e)
     return rules_dict
 
@@ -247,6 +253,7 @@ def _load_global_settings(db: Session, fallback: GlobalSettings) -> GlobalSettin
                 view_max=fallback.view_max,
             )
     except Exception as e:
+        db.rollback()   # reset session so subsequent writes still work
         logger.warning("Could not load global_settings from DB: %s", e)
     return fallback
 
@@ -308,6 +315,7 @@ def _read_file(data: bytes, filename: str) -> dict[str, list[dict]]:
         all_sheets = pd.read_excel(
             buf, sheet_name=None, dtype=object,
             keep_default_na=False, na_values=[""],
+            engine="openpyxl",
         )
         result = {}
         for sheet_name, df in all_sheets.items():
@@ -391,11 +399,11 @@ async def crm_process(
         for lid, entries in today_snapshot.items():
             merged_snapshot.setdefault(lid, []).extend(entries)
 
-        # Build CSV bytes for this sheet
+        # Build CSV bytes for this sheet — only OUTPUT_COLUMNS in correct order
         try:
-            df  = pd.DataFrame(output_rows)
+            df  = pd.DataFrame(output_rows, columns=OUTPUT_COLUMNS)
             buf = io.BytesIO()
-            df.to_csv(buf, index=False, encoding="utf-8-sig")
+            df.to_csv(buf, index=False, encoding="utf-8")
             csv_bytes = buf.getvalue()
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"CSV build error on sheet '{sheet_name}': {e}")
@@ -418,16 +426,36 @@ async def crm_process(
 
         # Log to processed_files table
         ad_type = _detect_ad_type(sheet_name)
+        _now = datetime.now(timezone.utc)
         try:
+            db.rollback()   # clear any open read-transaction before writing
             db.add(ProcessedFile(
                 original_filename=file.filename,
                 saved_filename=out_name,
-                processed_at=datetime.now(timezone.utc),
+                processed_at=_now,
                 ad_type=ad_type,
             ))
             db.commit()
+            logger.info("Saved ProcessedFile record: %s", out_name)
+        except IntegrityError:
+            # saved_filename already exists (unique constraint) — update it
+            db.rollback()
+            try:
+                existing = db.query(ProcessedFile).filter(
+                    ProcessedFile.saved_filename == out_name
+                ).first()
+                if existing:
+                    existing.original_filename = file.filename
+                    existing.processed_at = _now
+                    existing.ad_type = ad_type
+                    db.commit()
+                    logger.info("Updated existing ProcessedFile record: %s", out_name)
+            except Exception as e2:
+                db.rollback()
+                logger.error("FAILED to update processed_files: %s", e2, exc_info=True)
         except Exception as e:
-            logger.warning("Could not log to processed_files: %s", e)
+            db.rollback()
+            logger.error("FAILED to log processed_files: %s", e, exc_info=True)
 
         processed_csvs.append((out_name, csv_bytes, ad_type))
 

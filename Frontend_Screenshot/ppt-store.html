@@ -23,60 +23,171 @@
     }
 
     .store-card-ic {
-      width: 38px; height: 38px; border-radius: 9px;
-      display: flex; align-items: center; justify-content: center; font-size: 18px;
-      background: rgba(16, 185, 129, .18); color: #34d399;
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      background: rgba(16, 185, 129, .18);
+      color: #34d399;
     }
 
-    .store-card-ttl { font-size: 15px; font-weight: 600; color: var(--text-primary, #e2e8f0); }
-    .store-card-sub { font-size: 12px; color: var(--text-muted, #94a3b8); margin-top: 2px; }
+    .store-card-ttl {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary, #e2e8f0);
+    }
 
-    .stat-chips { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .store-card-sub {
+      font-size: 12px;
+      color: var(--text-muted, #94a3b8);
+      margin-top: 2px;
+    }
+
+    .stat-chips {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
     .stat-chip {
       background: rgba(255, 255, 255, .04);
       border: 1px solid var(--border, #2d3748);
-      border-radius: 9px; padding: 10px 16px; text-align: center; flex: 1; min-width: 90px;
+      border-radius: 9px;
+      padding: 10px 16px;
+      text-align: center;
+      flex: 1;
+      min-width: 90px;
     }
-    .stat-chip .sv { font-size: 22px; font-weight: 700; color: var(--text-primary, #e2e8f0); }
-    .stat-chip .sl { font-size: 11px; color: var(--text-muted, #94a3b8); margin-top: 2px; }
 
-    .item-list { display: flex; flex-direction: column; gap: 10px; }
+    .stat-chip .sv {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary, #e2e8f0);
+    }
+
+    .stat-chip .sl {
+      font-size: 11px;
+      color: var(--text-muted, #94a3b8);
+      margin-top: 2px;
+    }
+
+    .item-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
     .item-row {
-      display: flex; align-items: center; gap: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
       padding: 12px 14px;
       background: rgba(255, 255, 255, .03);
-      border-radius: 9px; border: 1px solid var(--border, #2d3748); transition: .15s;
+      border-radius: 9px;
+      border: 1px solid var(--border, #2d3748);
+      transition: .15s;
     }
-    .item-row:hover { border-color: #6366f1; background: rgba(99, 102, 241, .06); }
-    .item-row .item-icon { font-size: 22px; color: #60a5fa; flex-shrink: 0; }
-    .item-info { flex: 1; min-width: 0; }
+
+    .item-row:hover {
+      border-color: #6366f1;
+      background: rgba(99, 102, 241, .06);
+    }
+
+    .item-row .item-icon {
+      font-size: 22px;
+      color: #60a5fa;
+      flex-shrink: 0;
+    }
+
+    .item-info {
+      flex: 1;
+      min-width: 0;
+    }
+
     .item-name {
-      font-size: 13px; font-weight: 500; color: var(--text-primary, #e2e8f0);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary, #e2e8f0);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .item-meta { font-size: 11px; color: var(--text-muted, #94a3b8); margin-top: 2px; }
-    .item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    .item-meta {
+      font-size: 11px;
+      color: var(--text-muted, #94a3b8);
+      margin-top: 2px;
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
 
     .btn-dl {
-      background: rgba(16, 185, 129, .15); color: #34d399;
+      background: rgba(16, 185, 129, .15);
+      color: #34d399;
       border: 1px solid rgba(16, 185, 129, .3);
-      padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;
-      transition: .15s; display: flex; align-items: center; gap: 4px; text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: .15s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      text-decoration: none;
     }
-    .btn-dl:hover { background: rgba(16, 185, 129, .25); }
+
+    .btn-dl:hover {
+      background: rgba(16, 185, 129, .25);
+    }
 
     .btn-del {
-      background: rgba(239, 68, 68, .12); color: #f87171;
+      background: rgba(239, 68, 68, .12);
+      color: #f87171;
       border: 1px solid rgba(239, 68, 68, .25);
-      padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;
-      transition: .15s; display: flex; align-items: center; gap: 4px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: .15s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
-    .btn-del:hover { background: rgba(239, 68, 68, .22); }
 
-    .empty-state { text-align: center; padding: 48px 20px; color: var(--text-muted, #94a3b8); }
-    .empty-state i { font-size: 48px; margin-bottom: 12px; display: block; opacity: .3; }
-    .empty-state p { font-size: 13px; margin: 0; }
-    .empty-state small { font-size: 12px; opacity: .6; }
+    .btn-del:hover {
+      background: rgba(239, 68, 68, .22);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-muted, #94a3b8);
+    }
+
+    .empty-state i {
+      font-size: 48px;
+      margin-bottom: 12px;
+      display: block;
+      opacity: .3;
+    }
+
+    .empty-state p {
+      font-size: 13px;
+      margin: 0;
+    }
+
+    .empty-state small {
+      font-size: 12px;
+      opacity: .6;
+    }
   </style>
 </head>
 
@@ -105,7 +216,8 @@
       <div class="nav-label">SYSTEM</div>
       <a href="crm-excel.html" class="nav-item"><i class='bx bx-credit-card'></i> CRM Excel Processor</a>
       <a href="final-report.html" class="nav-item"><i class='bx bx-file'></i> Final Report</a>
-      <a href="#" class="nav-item"><i class='bx bx-support'></i> Reach Report</a>
+      <a href="qc-checker.html" class="nav-item"><i class='bx bx-badge-check'></i> QC Checker</a>
+      <a href="reach-report.html" class="nav-item"><i class='bx bx-target-lock'></i> Reach Report</a>
       <a href="#" class="nav-item"><i class='bx bx-cog'></i> Settings</a>
     </nav>
     <div class="sidebar-footer">
@@ -134,7 +246,10 @@
         </button>
         <div class="user-chip">
           <div class="user-av">AD</div>
-          <div><div class="user-name">Admin</div><div class="user-role">Super Admin</div></div>
+          <div>
+            <div class="user-name">Admin</div>
+            <div class="user-role">Super Admin</div>
+          </div>
         </div>
       </div>
     </header>
@@ -286,12 +401,12 @@
     loadReports();
   </script>
   <script>
-    (function() {
+    (function () {
       const token = localStorage.getItem('access_token');
       if (!token) { window.location.href = 'login.html'; return; }
 
-      const role         = localStorage.getItem('user_role') || '';
-      const pagesRaw     = localStorage.getItem('allowed_pages');
+      const role = localStorage.getItem('user_role') || '';
+      const pagesRaw = localStorage.getItem('allowed_pages');
       const allowedPages = pagesRaw ? JSON.parse(pagesRaw) : null;
       if (allowedPages !== null && !allowedPages.includes('ppt_store')) {
         window.location.href = 'login.html'; return;
@@ -315,4 +430,5 @@
     })();
   </script>
 </body>
+
 </html>

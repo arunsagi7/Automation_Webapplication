@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QC Checker — AdVision AI</title>
+  <link rel="stylesheet" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css">
+  <link rel="stylesheet" href="style.css?v=3">
+  <style>
+    .qc-wrap {
+      margin-left: var(--sidebar-w);
+      padding: 28px 32px;
+      min-height: 100vh;
+      width: calc(100% - var(--sidebar-w));
+      box-sizing: border-box;
+    }
+
+    body.no-sidebar #qc-sidebar {
+      display: none !important;
+    }
+
+    body.no-sidebar .qc-wrap {
+      margin-left: 0 !important;
+      width: 100% !important;
+      padding: 28px 40px;
+    }
+
+    #header-user-area {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      margin-left: auto;
+      padding-right: 24px;
+    }
+
+    #header-user-area.visible {
+      display: flex;
+    }
+
+    #header-username {
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    #header-role {
+      font-size: .75rem;
+      color: var(--text-sec);
+    }
+
+    #header-logout-btn {
+      background: rgba(239, 68, 68, .12);
+      color: #ef4444;
+      border: none;
+      border-radius: 7px;
+      padding: 6px 14px;
+      font-size: .8rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    #header-logout-btn:hover {
+      background: rgba(239, 68, 68, .22);
+    }
+
+    /* Card */
+    .qc-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+    }
+
+    .qc-card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    .qc-card-sub {
+      font-size: 0.78rem;
+      color: var(--text-sec);
+      margin-bottom: 0;
+    }
+
+    /* Stats row */
+    .qc-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .qc-stat {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 22px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .qc-stat-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .qc-stat-val {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .qc-stat-lbl {
+      font-size: 0.75rem;
+      color: var(--text-sec);
+      margin-top: 3px;
+    }
+
+    /* Table */
+    .qc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.83rem;
+    }
+
+    .qc-table th {
+      text-align: left;
+      padding: 8px 12px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .qc-table td {
+      padding: 11px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      vertical-align: middle;
+    }
+
+    .qc-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .qc-table tr:hover td {
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .qc-name {
+      font-weight: 500;
+      color: var(--text);
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .qc-filename {
+      font-size: 0.71rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .qc-date {
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .qc-size {
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .btn-dl {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      color: #10b981;
+      padding: 5px 12px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+
+    .btn-dl:hover {
+      background: rgba(16, 185, 129, 0.22);
+    }
+
+    .btn-del {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: transparent;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: rgba(239, 68, 68, 0.7);
+      padding: 5px 10px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      margin-left: 6px;
+      transition: all 0.15s;
+    }
+
+    .btn-del:hover {
+      background: rgba(239, 68, 68, 0.08);
+      color: #ef4444;
+    }
+
+    .qc-empty {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    /* Search bar */
+    .qc-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .qc-search {
+      flex: 1;
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px 8px 36px;
+      font-size: 0.82rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .qc-search:focus {
+      border-color: var(--accent);
+    }
+
+    .qc-search-wrap {
+      position: relative;
+      flex: 1;
+    }
+
+    .qc-search-wrap i {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 1rem;
+      pointer-events: none;
+    }
+
+    .btn-refresh {
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      color: var(--accent);
+      padding: 7px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+
+    .btn-refresh:hover {
+      background: rgba(99, 102, 241, 0.22);
+    }
+
+    /* Toast */
+    .qc-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 0.82rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, .4);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 9999;
+    }
+
+    .qc-toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .qc-toast.success i {
+      color: var(--success);
+    }
+
+    .qc-toast.error i {
+      color: var(--error);
+    }
+
+    /* Status badge */
+    .qc-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      white-space: nowrap;
+    }
+    .badge-draft   { background: rgba(107,114,128,.13); color: #9ca3af; }
+    .badge-in_qc   { background: rgba(245,158,11,.13);  color: #f59e0b; }
+    .badge-approved{ background: rgba(16,185,129,.13);  color: #10b981; }
+    .badge-warning { background: rgba(245,158,11,.13);  color: #f59e0b; }
+    .badge-rejected{ background: rgba(239,68,68,.13);   color: #ef4444; }
+
+    /* Select column */
+    .qc-radio {
+      width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer;
+    }
+
+    /* Send to QC button */
+    .btn-send-qc {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(99,102,241,.15);
+      border: 1px solid rgba(99,102,241,.35);
+      color: var(--accent);
+      padding: 7px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      transition: background .15s;
+      white-space: nowrap;
+    }
+    .btn-send-qc:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-send-qc:not(:disabled):hover { background: rgba(99,102,241,.28); }
+
+    /* Modal overlay */
+    .qc-modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .qc-modal-overlay.open { display: flex; }
+
+    .qc-modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 30px 32px;
+      width: 560px;
+      max-width: 96vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    }
+    .qc-modal-title {
+      font-size: 1rem; font-weight: 700; color: var(--text);
+      margin-bottom: 4px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .qc-modal-sub {
+      font-size: 0.78rem; color: var(--text-sec); margin-bottom: 22px;
+    }
+    .qc-modal-file {
+      font-size: 0.78rem; color: var(--accent); margin-bottom: 18px;
+      word-break: break-all;
+    }
+    .qc-field { margin-bottom: 16px; }
+    .qc-field label {
+      display: block; font-size: 0.75rem; font-weight: 600;
+      color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: .04em; margin-bottom: 6px;
+    }
+    .qc-field input {
+      width: 100%; box-sizing: border-box;
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 13px;
+      font-size: 0.9rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .qc-field input:focus { border-color: var(--accent); }
+    .qc-field .fetch-note {
+      font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;
+    }
+
+    .qc-modal-actions {
+      display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px;
+    }
+    .btn-modal-cancel {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-sec);
+      padding: 8px 18px; border-radius: 8px;
+      cursor: pointer; font-size: 0.82rem;
+    }
+    .btn-modal-cancel:hover { background: var(--bg-hover); }
+    .btn-modal-submit {
+      background: var(--accent);
+      border: none; color: #fff;
+      padding: 8px 22px; border-radius: 8px;
+      cursor: pointer; font-size: 0.82rem; font-weight: 600;
+      display: flex; align-items: center; gap: 6px;
+      transition: opacity .15s;
+    }
+    .btn-modal-submit:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-modal-submit:not(:disabled):hover { opacity: .88; }
+
+    .fetch-spinner {
+      display: none;
+      font-size: 0.78rem; color: var(--accent);
+      margin-bottom: 14px;
+    }
+    .fetch-spinner.show { display: flex; align-items: center; gap: 6px; }
+
+    /* QC Results panel */
+    .qc-results-panel { display: none; margin-top: 22px; }
+    .qc-results-panel.show { display: block; }
+
+    .qc-results-title {
+      font-size: 0.82rem; font-weight: 700; color: var(--text);
+      margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+    }
+    .qc-result-table {
+      width: 100%; border-collapse: collapse; font-size: 0.78rem;
+    }
+    .qc-result-table th {
+      text-align: left; padding: 6px 10px;
+      color: var(--text-muted); border-bottom: 1px solid var(--border);
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: .04em;
+    }
+    .qc-result-table td {
+      padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,0.04);
+      vertical-align: top;
+    }
+    .qc-result-table tr:last-child td { border-bottom: none; }
+    .chk-name { font-weight: 600; color: var(--text); }
+    .chk-detail { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+    .chk-pass {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(16,185,129,.13); color: #10b981;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 0.7rem; font-weight: 700;
+    }
+    .chk-fail {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(239,68,68,.13); color: #ef4444;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 0.7rem; font-weight: 700;
+    }
+    .chk-warn {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(245,158,11,.13); color: #f59e0b;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 0.7rem; font-weight: 700;
+    }
+    .chk-corrected {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(99,102,241,.13); color: #6366f1;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 0.7rem; font-weight: 700;
+    }
+    /* Corrections summary panel */
+    .qc-corrections-panel {
+      margin: 14px 0 4px 0;
+      background: rgba(99,102,241,.07);
+      border: 1px solid rgba(99,102,241,.2);
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+    .qc-corrections-title {
+      font-size: 0.78rem; font-weight: 700; color: #6366f1;
+      margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+    }
+    .qc-correction-item {
+      font-size: 0.73rem; color: var(--text);
+      padding: 4px 0; border-bottom: 1px solid rgba(99,102,241,.1);
+      display: flex; gap: 8px;
+    }
+    .qc-correction-item:last-child { border-bottom: none; }
+    .qc-correction-sheet {
+      font-weight: 600; color: #6366f1; min-width: 80px;
+    }
+    /* Sheet group header row in results table */
+    .qc-sheet-header-row td {
+      background: rgba(99,102,241,.09);
+      padding: 7px 10px;
+      border-bottom: 1px solid rgba(99,102,241,.18) !important;
+    }
+    .qc-sheet-name {
+      font-size: 0.78rem; font-weight: 700; color: var(--accent);
+      letter-spacing: .04em; text-transform: uppercase;
+    }
+    .qc-sheet-counts {
+      font-size: 0.68rem; color: var(--text-muted); margin-left: 10px;
+    }
+    .qc-overall {
+      margin-top: 12px; padding: 10px 14px;
+      border-radius: 8px; font-size: 0.85rem; font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .qc-overall.approved { background: rgba(16,185,129,.12); color: #10b981; border: 1px solid rgba(16,185,129,.25); }
+    .qc-overall.warning  { background: rgba(245,158,11,.12);  color: #f59e0b; border: 1px solid rgba(245,158,11,.25); }
+    .qc-overall.rejected { background: rgba(239,68,68,.12);   color: #ef4444; border: 1px solid rgba(239,68,68,.25); }
+
+    .btn-dl-qc {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.25);
+      color: #10b981; padding: 7px 16px; border-radius: 8px;
+      cursor: pointer; font-size: 0.82rem; font-weight: 600;
+      text-decoration: none; transition: background .15s;
+    }
+    .btn-dl-qc:hover { background: rgba(16,185,129,.22); }
+
+    @media (max-width: 900px) {
+      .qc-stats { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      .qc-stats { grid-template-columns: 1fr; }
+      .qc-wrap  { padding: 16px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ═══════ SIDEBAR ═══════ -->
+  <aside class="sidebar" id="qc-sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"><i class='bx bx-film'></i></div>
+      <div>
+        <div class="logo-name">AdVision AI</div>
+        <div class="logo-sub">Ad Injector Platform</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">MAIN</div>
+      <a href="index.html" class="nav-item"><i class='bx bxs-dashboard'></i> Dashboard</a>
+      <a href="ppt-store.html" class="nav-item"><i class='bx bx-broadcast'></i> PPT Store</a>
+      <a href="#" class="nav-item"><i class='bx bx-link'></i> URL Manager</a>
+      <a href="#" class="nav-item"><i class='bx bx-image'></i> Image Manager</a>
+      <a href="#" class="nav-item"><i class='bx bx-shield'></i> VPN Manager</a>
+      <a href="#" class="nav-item"><i class='bx bx-task'></i> Tasks</a>
+      <div class="nav-label">ANALYTICS</div>
+      <a href="#" class="nav-item"><i class='bx bx-bar-chart-alt-2'></i> Reports</a>
+      <a href="#" class="nav-item"><i class='bx bx-history'></i> Activity Logs</a>
+      <div class="nav-label">SYSTEM</div>
+      <a href="crm-excel.html" class="nav-item"><i class='bx bx-credit-card'></i> CRM Excel Processor</a>
+      <a href="final-report.html" class="nav-item"><i class='bx bx-file'></i> Final Report</a>
+      <a href="qc-checker.html" class="nav-item active"><i class='bx bx-badge-check'></i> QC Checker</a>
+      <a href="reach-report.html" class="nav-item"><i class='bx bx-target-lock'></i> Reach Report</a>
+      <a href="#" class="nav-item"><i class='bx bx-cog'></i> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sys-status-row">
+        <span class="dot-green"></span>
+        <div>
+          <div class="sys-status-title">System Status</div>
+          <div id="backend-status" class="sys-status-sub">Checking...</div>
+        </div>
+      </div>
+      <div class="user-row" id="userRow"
+        style="display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 0;border-top:1px solid rgba(99,102,241,0.1);">
+        <i class='bx bx-user-circle' style="font-size:1.3rem;color:#6366f1;"></i>
+        <div style="flex:1;min-width:0;">
+          <div id="sidebarUsername"
+            style="font-size:0.78rem;font-weight:600;color:#e3e3e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            —</div>
+          <div id="sidebarRole" style="font-size:0.68rem;color:#6b7280;text-transform:capitalize;">—</div>
+        </div>
+        <button id="logoutBtn" title="Logout"
+          style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:1.1rem;padding:2px;">
+          <i class='bx bx-log-out'></i>
+        </button>
+      </div>
+      <div class="version-txt">Version 2.1.0</div>
+    </div>
+  </aside>
+
+  <!-- ═══════ MAIN ═══════ -->
+  <div class="qc-wrap">
+
+    <!-- Header -->
+    <header class="top-header" style="margin-left:0;position:static;border-radius:12px;margin-bottom:24px;">
+      <div class="page-title-block">
+        <h1 class="page-h1">QC Checker</h1>
+        <p class="page-sub">Review all generated Final Reports before delivery</p>
+      </div>
+      <div id="header-user-area">
+        <div>
+          <div id="header-username"></div>
+          <div id="header-role"></div>
+        </div>
+        <button id="header-logout-btn">Logout</button>
+      </div>
+    </header>
+
+    <!-- Stats -->
+    <div class="qc-stats" id="qc-stats">
+      <div class="qc-stat">
+        <div class="qc-stat-icon" style="background:rgba(99,102,241,0.12);color:var(--accent);">
+          <i class='bx bx-folder-open'></i>
+        </div>
+        <div>
+          <div class="qc-stat-val" id="stat-total">—</div>
+          <div class="qc-stat-lbl">Total Reports</div>
+        </div>
+      </div>
+      <div class="qc-stat">
+        <div class="qc-stat-icon" style="background:rgba(16,185,129,0.12);color:#10b981;">
+          <i class='bx bx-file-blank'></i>
+        </div>
+        <div>
+          <div class="qc-stat-val" id="stat-size">—</div>
+          <div class="qc-stat-lbl">Total Size</div>
+        </div>
+      </div>
+      <div class="qc-stat">
+        <div class="qc-stat-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;">
+          <i class='bx bx-time-five'></i>
+        </div>
+        <div>
+          <div class="qc-stat-val" id="stat-latest">—</div>
+          <div class="qc-stat-lbl">Latest Report</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reports table -->
+    <div class="qc-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div>
+          <div class="qc-card-title">
+            <i class='bx bx-badge-check' style="color:var(--accent);margin-right:6px;"></i>Generated Reports
+          </div>
+          <div class="qc-card-sub">All Final Reports saved in the database — review and download</div>
+        </div>
+      </div>
+
+      <div class="qc-toolbar">
+        <div class="qc-search-wrap">
+          <i class='bx bx-search'></i>
+          <input class="qc-search" id="qc-search" type="text" placeholder="Search by campaign name or filename…"
+            oninput="filterTable()">
+        </div>
+        <button class="btn-send-qc" id="btn-send-qc" disabled onclick="openQcModal()">
+          <i class='bx bx-send'></i> Send to QC
+        </button>
+        <button class="btn-refresh" onclick="loadReports()">
+          <i class='bx bx-refresh'></i> Refresh
+        </button>
+      </div>
+
+      <div id="qc-table-wrap">
+        <div class="qc-empty">
+          <i class='bx bx-loader-alt bx-spin' style="font-size:1.5rem;display:block;margin-bottom:8px;"></i>
+          Loading reports…
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /qc-wrap -->
+
+  <!-- ═══════ Send to QC Modal ═══════ -->
+  <div class="qc-modal-overlay" id="qc-modal-overlay">
+    <div class="qc-modal">
+      <div class="qc-modal-title">
+        <i class='bx bx-badge-check' style="color:var(--accent);font-size:1.2rem;"></i>
+        <span id="modal-title-text">Send to QC</span>
+      </div>
+      <div class="qc-modal-sub" id="modal-subtitle">Review the auto-fetched values from the REACH sheet, then submit.</div>
+      <div class="qc-modal-file" id="modal-filename">—</div>
+
+      <!-- Input phase -->
+      <div id="qc-input-phase">
+        <div class="fetch-spinner" id="fetch-spinner">
+          <i class='bx bx-loader-alt bx-spin'></i> Fetching REACH data…
+        </div>
+
+        <div class="qc-field">
+          <label>Impressions</label>
+          <input type="number" id="qc-impressions" placeholder="Auto-fetched from REACH sheet" min="0">
+          <div class="fetch-note">Auto-filled from the REACH sheet — edit if needed</div>
+        </div>
+        <div class="qc-field">
+          <label>Clicks</label>
+          <input type="number" id="qc-clicks" placeholder="Auto-fetched from REACH sheet" min="0">
+          <div class="fetch-note">Auto-filled from the REACH sheet — edit if needed</div>
+        </div>
+        <div class="qc-field">
+          <label>Click Rate (CTR)</label>
+          <input type="text" id="qc-ctr" placeholder="e.g. 0.25%">
+          <div class="fetch-note">Auto-filled from the REACH sheet — edit if needed</div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin:16px 0 14px;"></div>
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">
+          DATE SHEET VALIDATION (Optional)
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="qc-field" style="margin-bottom:0;">
+            <label>Campaign Start Date</label>
+            <input type="text" id="qc-campaign-start" placeholder="e.g. 01 June, 2026">
+          </div>
+          <div class="qc-field" style="margin-bottom:0;">
+            <label>Campaign End Date</label>
+            <input type="text" id="qc-campaign-end" placeholder="e.g. 30 June, 2026">
+          </div>
+        </div>
+        <div class="fetch-note" style="margin-top:4px;">Leave blank to skip date range check</div>
+
+        <div class="qc-modal-actions">
+          <button class="btn-modal-cancel" onclick="closeQcModal()">Cancel</button>
+          <button class="btn-modal-submit" id="btn-modal-submit" onclick="submitToQc()">
+            <i class='bx bx-play'></i> Run QC Check
+          </button>
+        </div>
+      </div>
+
+      <!-- Results phase (shown after QC runs) -->
+      <div class="qc-results-panel" id="qc-results-panel">
+        <div class="qc-results-title">
+          <i class='bx bx-list-check' style="font-size:1.1rem;color:var(--accent);"></i>
+          REACH Sheet — QC Results
+        </div>
+        <table class="qc-result-table">
+          <thead>
+            <tr>
+              <th>Check</th>
+              <th>Expected</th>
+              <th>Actual</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody id="qc-results-tbody"></tbody>
+        </table>
+        <div id="qc-overall-banner" class="qc-overall"></div>
+        <div class="qc-modal-actions" style="margin-top:16px;">
+          <button class="btn-modal-cancel" onclick="closeQcModal()">Close</button>
+          <a class="btn-dl-qc" id="btn-dl-qc-report" href="#" onclick="downloadFinalReport(event)">
+            <i class='bx bx-download'></i> Download Report
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="qc-toast" id="qc-toast">
+    <i class='bx bx-check-circle'></i>
+    <span id="toast-msg">Done</span>
+  </div>
+
+  <script type="module">
+    import { API_BASE_URL } from './src/config/apiConfig.js';
+    window._API = API_BASE_URL;
+  </script>
+
+  <script>
+    // ── Toast ──────────────────────────────────────────────────────────
+    function showToast(msg, type = 'success') {
+      const t = document.getElementById('qc-toast');
+      const icons = { success: 'bx-check-circle', error: 'bx-error-circle' };
+      t.className = `qc-toast ${type}`;
+      t.querySelector('i').className = `bx ${icons[type] || icons.success}`;
+      document.getElementById('toast-msg').textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    // ── Formatters ─────────────────────────────────────────────────────
+    function fmtSize(bytes) {
+      if (!bytes) return '—';
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' })
+        + ' ' + d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function fmtDateShort(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function badgeHtml(status) {
+      const map = {
+        draft:    ['draft',    ''],
+        in_qc:   ['in QC',   '⏳ '],
+        approved: ['approved', '✅ '],
+        warning:  ['warning',  '⚠️ '],
+        rejected: ['rejected', '❌ '],
+      };
+      const [label, icon] = map[status] || map.draft;
+      return `<span class="qc-badge badge-${status || 'draft'}">${icon}${label}</span>`;
+    }
+
+    // ── Report data store ──────────────────────────────────────────────
+    let _reports = [];
+    let _selectedId = null;   // currently selected report ID
+
+    // ── Load reports ───────────────────────────────────────────────────
+    async function loadReports() {
+      _selectedId = null;
+      document.getElementById('btn-send-qc').disabled = true;
+
+      const wrap = document.getElementById('qc-table-wrap');
+      wrap.innerHTML = `<div class="qc-empty"><i class='bx bx-loader-alt bx-spin' style="font-size:1.4rem;display:block;margin-bottom:8px;"></i>Loading…</div>`;
+
+      try {
+        const api = window._API || 'http://127.0.0.1:8001';
+        const resp = await fetch(`${api}/final-report/reports`);
+        if (!resp.ok) throw new Error(`Server error ${resp.status}`);
+        _reports = await resp.json();
+        updateStats(_reports);
+        renderTable(_reports);
+      } catch (e) {
+        wrap.innerHTML = `<div class="qc-empty" style="color:var(--error);"><i class='bx bx-error-circle' style="font-size:1.6rem;display:block;margin-bottom:8px;"></i>Failed to load: ${e.message}</div>`;
+      }
+    }
+    window.loadReports = loadReports;
+
+    // ── Stats ──────────────────────────────────────────────────────────
+    function updateStats(reports) {
+      document.getElementById('stat-total').textContent = reports.length;
+      const totalBytes = reports.reduce((s, r) => s + (r.file_size || 0), 0);
+      document.getElementById('stat-size').textContent = fmtSize(totalBytes);
+      if (reports.length) {
+        const sorted = [...reports].sort((a, b) => new Date(b.generated_at) - new Date(a.generated_at));
+        document.getElementById('stat-latest').textContent = fmtDateShort(sorted[0].generated_at);
+      } else {
+        document.getElementById('stat-latest').textContent = '—';
+      }
+    }
+
+    // ── Render table ───────────────────────────────────────────────────
+    function renderTable(reports) {
+      const wrap = document.getElementById('qc-table-wrap');
+
+      if (!reports.length) {
+        wrap.innerHTML = `<div class="qc-empty"><i class='bx bx-folder-open' style="font-size:1.8rem;display:block;margin-bottom:8px;opacity:.4;"></i>No reports yet — generate one from Final Report.</div>`;
+        return;
+      }
+
+      const rows = reports.map(r => {
+        const name = (r.campaign_name || r.filename);
+        const status = r.qc_status || 'draft';
+        return `
+        <tr data-name="${name.toLowerCase()}" data-file="${r.filename.toLowerCase()}" data-id="${r.id}">
+          <td style="width:32px;text-align:center;">
+            <input type="radio" class="qc-radio" name="qc-select" value="${r.id}"
+              onchange="onSelectReport(${r.id})" ${status === 'in_qc' ? 'disabled title="Already in QC"' : ''}>
+          </td>
+          <td>
+            <div class="qc-name" title="${name}">${name}</div>
+            <div class="qc-filename">${r.filename}</div>
+          </td>
+          <td class="qc-date">${fmtDate(r.generated_at)}</td>
+          <td class="qc-size">${fmtSize(r.file_size)}</td>
+          <td>${badgeHtml(status)}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn-dl" onclick="downloadReport(${r.id}, '${r.filename}')">
+              <i class='bx bx-download'></i> Download
+            </button>
+            <button class="btn-del" onclick="deleteReport(${r.id})" title="Delete">
+              <i class='bx bx-trash'></i>
+            </button>
+          </td>
+        </tr>`;
+      }).join('');
+
+      wrap.innerHTML = `
+        <table class="qc-table">
+          <thead><tr>
+            <th style="width:32px;"></th>
+            <th>Campaign</th>
+            <th>Generated</th>
+            <th>Size</th>
+            <th>QC Status</th>
+            <th>Actions</th>
+          </tr></thead>
+          <tbody id="qc-tbody">${rows}</tbody>
+        </table>`;
+    }
+
+    // ── Row selection ──────────────────────────────────────────────────
+    function onSelectReport(id) {
+      _selectedId = id;
+      document.getElementById('btn-send-qc').disabled = false;
+    }
+    window.onSelectReport = onSelectReport;
+
+    // ── Search / filter ────────────────────────────────────────────────
+    function filterTable() {
+      const q = document.getElementById('qc-search').value.toLowerCase().trim();
+      const tbody = document.getElementById('qc-tbody');
+      if (!tbody) return;
+      tbody.querySelectorAll('tr').forEach(tr => {
+        const name = tr.dataset.name || '';
+        const file = tr.dataset.file || '';
+        tr.style.display = (!q || name.includes(q) || file.includes(q)) ? '' : 'none';
+      });
+    }
+    window.filterTable = filterTable;
+
+    // ── Download ───────────────────────────────────────────────────────
+    async function downloadReport(id, filename) {
+      try {
+        const api = window._API || 'http://127.0.0.1:8001';
+        const resp = await fetch(`${api}/final-report/reports/${id}/download`);
+        if (!resp.ok) throw new Error(`Server error ${resp.status}`);
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename; a.style.display = 'none';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        showToast(`Downloaded: ${filename}`, 'success');
+      } catch (e) {
+        showToast(e.message || 'Download failed', 'error');
+      }
+    }
+    window.downloadReport = downloadReport;
+
+    // ── Delete ─────────────────────────────────────────────────────────
+    async function deleteReport(id) {
+      if (!confirm('Delete this report from the database?')) return;
+      try {
+        const api = window._API || 'http://127.0.0.1:8001';
+        const resp = await fetch(`${api}/final-report/reports/${id}`, { method: 'DELETE' });
+        if (!resp.ok) throw new Error(`Server error ${resp.status}`);
+        showToast('Report deleted', 'success');
+        loadReports();
+      } catch (e) {
+        showToast(e.message || 'Delete failed', 'error');
+      }
+    }
+    window.deleteReport = deleteReport;
+
+    // ── Send to QC — open modal ────────────────────────────────────────
+    async function openQcModal() {
+      if (!_selectedId) return;
+
+      const report = _reports.find(r => r.id === _selectedId);
+      document.getElementById('modal-filename').textContent = report ? report.filename : `Report #${_selectedId}`;
+
+      // Reset to input phase
+      document.getElementById('modal-title-text').textContent = 'Send to QC';
+      document.getElementById('modal-subtitle').textContent   = 'Review the auto-fetched values from the REACH sheet, then run the QC check.';
+      document.getElementById('qc-input-phase').style.display  = '';
+      document.getElementById('qc-results-panel').classList.remove('show');
+
+      // Clear fields
+      document.getElementById('qc-impressions').value    = '';
+      document.getElementById('qc-clicks').value         = '';
+      document.getElementById('qc-ctr').value            = '';
+      document.getElementById('qc-campaign-start').value = '';
+      document.getElementById('qc-campaign-end').value   = '';
+      document.getElementById('fetch-spinner').classList.add('show');
+      document.getElementById('btn-modal-submit').disabled = true;
+      document.getElementById('qc-modal-overlay').classList.add('open');
+
+      // Auto-fetch reach data
+      try {
+        const api = window._API || 'http://127.0.0.1:8001';
+        const resp = await fetch(`${api}/final-report/reports/${_selectedId}/reach-data`);
+        if (!resp.ok) throw new Error(`Server error ${resp.status}`);
+        const data = await resp.json();
+
+        document.getElementById('qc-impressions').value = data.impressions ?? '';
+        document.getElementById('qc-clicks').value      = data.clicks ?? '';
+        document.getElementById('qc-ctr').value         = data.ctr ?? '';
+        showToast('REACH data fetched ✓', 'success');
+      } catch (e) {
+        showToast('Could not auto-fetch — enter values manually', 'error');
+      } finally {
+        document.getElementById('fetch-spinner').classList.remove('show');
+        document.getElementById('btn-modal-submit').disabled = false;
+      }
+    }
+    window.openQcModal = openQcModal;
+
+    function closeQcModal() {
+      document.getElementById('qc-modal-overlay').classList.remove('open');
+    }
+    window.closeQcModal = closeQcModal;
+
+    // Close on backdrop click
+    document.getElementById('qc-modal-overlay').addEventListener('click', function(e) {
+      if (e.target === this) closeQcModal();
+    });
+
+    // ── Show QC results (grouped by sheet) ────────────────────────────
+    function showQcResults(qcResults, overall, corrections) {
+      document.getElementById('qc-input-phase').style.display = 'none';
+      document.getElementById('modal-title-text').textContent = 'QC Check Results';
+      document.getElementById('modal-subtitle').textContent   = '';
+
+      const _badge = {
+        PASS:      `<span class="chk-pass"><i class='bx bx-check'></i> PASS</span>`,
+        FAIL:      `<span class="chk-fail"><i class='bx bx-x'></i> FAIL</span>`,
+        WARNING:   `<span class="chk-warn"><i class='bx bx-error'></i> WARN</span>`,
+        CORRECTED: `<span class="chk-corrected"><i class='bx bx-wrench'></i> CORRECTED</span>`,
+      };
+
+      // Support both old flat array and new grouped dict format
+      const grouped = (qcResults && typeof qcResults === 'object' && !Array.isArray(qcResults))
+        ? qcResults
+        : { 'REACH': qcResults || [] };
+
+      let html = '';
+      for (const [sheet, checks] of Object.entries(grouped)) {
+        const pCount = checks.filter(c => c.status === 'PASS').length;
+        const fCount = checks.filter(c => c.status === 'FAIL').length;
+        const wCount = checks.filter(c => c.status === 'WARNING').length;
+        const cCount = checks.filter(c => c.status === 'CORRECTED').length;
+        const sheetBadge = fCount ? _badge.FAIL : wCount ? _badge.WARNING
+                         : cCount ? _badge.CORRECTED : _badge.PASS;
+
+        html += `
+          <tr class="qc-sheet-header-row">
+            <td colspan="4">
+              <span class="qc-sheet-name">${sheet}</span>
+              ${sheetBadge}
+              <span class="qc-sheet-counts">${pCount} pass · ${fCount} fail · ${wCount} warn · ${cCount} corrected</span>
+            </td>
+          </tr>`;
+
+        for (const chk of checks) {
+          html += `
+            <tr>
+              <td>
+                <div class="chk-name">${chk.check}</div>
+                <div class="chk-detail">${chk.formula || ''}</div>
+              </td>
+              <td style="color:var(--text-sec);font-size:0.75rem;">${chk.expected || '—'}</td>
+              <td style="color:var(--text);font-size:0.75rem;">${chk.actual || '—'}</td>
+              <td>${_badge[chk.status] || _badge.FAIL}</td>
+            </tr>`;
+        }
+      }
+
+      document.getElementById('qc-results-tbody').innerHTML = html;
+
+      // ── Corrections panel ──────────────────────────────────────────
+      // Remove any existing corrections panel first
+      const existingPanel = document.getElementById('qc-corrections-panel');
+      if (existingPanel) existingPanel.remove();
+
+      if (corrections && corrections.length > 0) {
+        const panel = document.createElement('div');
+        panel.id = 'qc-corrections-panel';
+        panel.className = 'qc-corrections-panel';
+        const items = corrections.map(c => `
+          <div class="qc-correction-item">
+            <span class="qc-correction-sheet">${c.sheet}</span>
+            <span>${c.check} — ${c.action}</span>
+          </div>`).join('');
+        panel.innerHTML = `
+          <div class="qc-corrections-title">
+            <i class='bx bx-wrench'></i>
+            Auto-corrections applied (${corrections.length}) — report updated
+          </div>
+          ${items}`;
+        document.getElementById('qc-overall-banner').insertAdjacentElement('afterend', panel);
+      }
+
+      const banner = document.getElementById('qc-overall-banner');
+      const cfg = {
+        approved: { cls: 'approved', icon: 'bx-check-shield', txt: 'APPROVED — All checks passed' },
+        warning:  { cls: 'warning',  icon: 'bx-error',        txt: 'WARNING — Some checks need review' },
+        rejected: { cls: 'rejected', icon: 'bx-shield-x',     txt: 'REJECTED — One or more checks failed' },
+      };
+      const c = cfg[overall] || cfg.rejected;
+      banner.className = `qc-overall ${c.cls}`;
+      banner.innerHTML = `<i class='bx ${c.icon}' style="font-size:1.2rem;"></i> ${c.txt}`;
+
+      document.getElementById('qc-results-panel').classList.add('show');
+    }
+
+    // ── Submit to QC ───────────────────────────────────────────────────
+    async function submitToQc() {
+      const impressions     = parseInt(document.getElementById('qc-impressions').value, 10);
+      const clicks          = parseInt(document.getElementById('qc-clicks').value, 10);
+      const ctr             = document.getElementById('qc-ctr').value.trim();
+      const campaign_start  = document.getElementById('qc-campaign-start').value.trim() || null;
+      const campaign_end    = document.getElementById('qc-campaign-end').value.trim()   || null;
+
+      if (isNaN(impressions) || isNaN(clicks) || !ctr) {
+        showToast('Please fill Impressions, Clicks and CTR before running QC', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btn-modal-submit');
+      btn.disabled = true;
+      btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> Running QC…`;
+
+      try {
+        const api = window._API || 'http://127.0.0.1:8001';
+        const resp = await fetch(`${api}/final-report/reports/${_selectedId}/send-to-qc`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ impressions, clicks, ctr, campaign_start, campaign_end }),
+        });
+        if (!resp.ok) throw new Error(`Server error ${resp.status}`);
+        const data = await resp.json();
+
+        showQcResults(data.qc_results || data.qc_checks || [], data.qc_status, data.corrections || []);
+        const toastMsg = {
+          approved: 'QC Approved ✓ — All checks passed',
+          warning:  'QC Warning ⚠ — Review flagged items',
+          rejected: 'QC Rejected ✗ — Checks failed',
+        }[data.qc_status] || 'QC completed';
+        showToast(toastMsg, data.qc_status === 'approved' ? 'success' : 'error');
+        // Save _selectedId before loadReports resets it — needed for download
+        const _qcReportId = _selectedId;
+        await loadReports();
+        _selectedId = _qcReportId;  // restore so download works
+      } catch (e) {
+        showToast(e.message || 'QC check failed', 'error');
+        btn.disabled = false;
+        btn.innerHTML = `<i class='bx bx-play'></i> Run QC Check`;
+      }
+    }
+    window.submitToQc = submitToQc;
+
+    // ── Download Final Report (from QC modal) ─────────────────────────
+    async function downloadFinalReport(e) {
+      e.preventDefault();
+      if (!_selectedId) return;
+      try {
+        const api  = window._API || 'http://127.0.0.1:8001';
+        const resp = await fetch(`${api}/final-report/reports/${_selectedId}/download`);
+        if (!resp.ok) throw new Error(`Server error ${resp.status}`);
+        const blob = await resp.blob();
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        const cd   = resp.headers.get('content-disposition') || '';
+        const m    = cd.match(/filename="([^"]+)"/);
+        a.href = url; a.download = m ? m[1] : `Report_${_selectedId}.xlsx`;
+        a.style.display = 'none';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        showToast('Report downloaded ✓', 'success');
+      } catch (e) {
+        showToast(e.message || 'Download failed', 'error');
+      }
+    }
+    window.downloadFinalReport = downloadFinalReport;
+
+    // ── Backend health ─────────────────────────────────────────────────
+    async function checkBackend() {
+      const el = document.getElementById('backend-status');
+      try {
+        const api = window._API || 'http://127.0.0.1:8001';
+        const r = await fetch(`${api}/health`, { signal: AbortSignal.timeout(3000) });
+        if (r.ok) { el.textContent = 'Local Backend'; el.style.color = 'var(--success)'; }
+        else throw new Error();
+      } catch { el.textContent = 'Backend Offline'; el.style.color = 'var(--error)'; }
+    }
+
+    // ── Init ───────────────────────────────────────────────────────────
+    setTimeout(checkBackend, 500);
+    loadReports();
+  </script>
+
+  <!-- Auth guard -->
+  <script>
+    (function () {
+      const token = localStorage.getItem('access_token');
+      if (!token) { window.location.href = 'login.html'; return; }
+
+      const role = localStorage.getItem('user_role') || '';
+      const pagesRaw = localStorage.getItem('allowed_pages');
+      const allowedPages = pagesRaw ? JSON.parse(pagesRaw) : null;
+
+      // Allow super_admin (null) or anyone with 'final_report' access (same data source)
+      if (allowedPages !== null && !allowedPages.includes('final_report') && !allowedPages.includes('qc_checker')) {
+        window.location.href = 'login.html'; return;
+      }
+
+      const username = localStorage.getItem('username') || '';
+      const isRestricted = allowedPages !== null;
+
+      function _doLogout() {
+        ['access_token', 'user_role', 'username', 'allowed_pages'].forEach(k => localStorage.removeItem(k));
+        window.location.href = 'login.html';
+      }
+
+      if (isRestricted) {
+        document.body.classList.add('no-sidebar');
+        const area = document.getElementById('header-user-area');
+        if (area) area.classList.add('visible');
+        const uEl = document.getElementById('header-username');
+        const rEl = document.getElementById('header-role');
+        if (uEl) uEl.textContent = username;
+        if (rEl) rEl.textContent = role.replace('_', ' ');
+        const btn = document.getElementById('header-logout-btn');
+        if (btn) btn.addEventListener('click', _doLogout);
+      } else {
+        const uEl = document.getElementById('sidebarUsername');
+        const rEl = document.getElementById('sidebarRole');
+        if (uEl) uEl.textContent = username;
+        if (rEl) rEl.textContent = role.replace('_', ' ');
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) logoutBtn.addEventListener('click', _doLogout);
+      }
+    })();
+  </script>
+
+</body>
+
+</html>

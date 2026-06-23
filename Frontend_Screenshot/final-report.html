@@ -12,6 +12,66 @@
       margin-left: var(--sidebar-w);
       padding: 28px 32px;
       min-height: 100vh;
+      width: calc(100% - var(--sidebar-w));
+      box-sizing: border-box;
+    }
+
+    /* ── No-sidebar mode (restricted users) ── */
+    body.no-sidebar #fr-sidebar {
+      display: none !important;
+    }
+
+    body.no-sidebar .fr-wrap {
+      margin-left: 0 !important;
+      padding: 28px 40px;
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box;
+    }
+
+    body.no-sidebar .fr-wrap .fr-card,
+    body.no-sidebar .fr-wrap>* {
+      max-width: 100% !important;
+      width: 100% !important;
+      box-sizing: border-box;
+    }
+
+    #header-user-area {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      margin-left: auto;
+      padding-right: 24px;
+    }
+
+    #header-user-area.visible {
+      display: flex;
+    }
+
+    #header-username {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    #header-role {
+      font-size: 0.75rem;
+      color: var(--text-sec);
+    }
+
+    #header-logout-btn {
+      background: rgba(239, 68, 68, 0.12);
+      color: #ef4444;
+      border: none;
+      border-radius: 7px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    #header-logout-btn:hover {
+      background: rgba(239, 68, 68, 0.22);
     }
 
     /* Upload card */
@@ -543,6 +603,84 @@
       cursor: not-allowed;
     }
 
+    /* ── Auto-QC panel ─────────────────────────────────────────────── */
+    .aqc-panel { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+
+    /* Primary "Report Ready" banner — always green */
+    .aqc-ready-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 13px 16px; font-size: 0.85rem; font-weight: 700;
+      background: rgba(16,185,129,.13); color: #10b981;
+      border-bottom: 1px solid rgba(16,185,129,.2);
+    }
+    .aqc-ready-bar i { font-size: 1.2rem; }
+    .aqc-ready-bar .aqc-ready-sub {
+      font-size: 0.73rem; font-weight: 400; color: rgba(16,185,129,.8); margin-left: 2px;
+    }
+
+    .aqc-dl-btn {
+      margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+      background: #10b981; border: none;
+      color: #fff; padding: 7px 18px; border-radius: 7px;
+      font-size: 0.8rem; font-weight: 700; text-decoration: none;
+      transition: background .15s; white-space: nowrap;
+    }
+    .aqc-dl-btn:hover { background: #059669; }
+
+    /* Info strip below ready bar */
+    .aqc-info-strip {
+      display: flex; align-items: center; gap: 14px;
+      padding: 8px 16px; border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,.02);
+    }
+    .aqc-info-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.72rem; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+    }
+    .aqc-chip-fixed { background: rgba(99,102,241,.13); color: #6366f1; }
+    .aqc-chip-warn  { background: rgba(245,158,11,.13);  color: #f59e0b; }
+    .aqc-chip-ok    { background: rgba(16,185,129,.13);  color: #10b981; }
+
+    /* Collapsible QC details toggle */
+    .aqc-toggle-btn {
+      all: unset; cursor: pointer; display: flex; align-items: center; gap: 6px;
+      padding: 8px 16px; font-size: 0.73rem; font-weight: 600; color: var(--text-sec);
+      border-bottom: 1px solid var(--border); width: 100%; box-sizing: border-box;
+      transition: color .15s;
+    }
+    .aqc-toggle-btn:hover { color: var(--text); }
+    .aqc-toggle-arrow { transition: transform .2s; }
+    .aqc-toggle-arrow.open { transform: rotate(90deg); }
+
+    .aqc-sheets-wrap { display: none; }
+    .aqc-sheets-wrap.visible { display: block; }
+
+    .aqc-sheet { border-bottom: 1px solid var(--border); }
+    .aqc-sheet:last-child { border-bottom: none; }
+
+    .aqc-sheet-hdr {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; background: rgba(99,102,241,.06);
+    }
+    .aqc-sheet-name { font-size: 0.75rem; font-weight: 700; color: var(--accent); letter-spacing: .04em; }
+    .aqc-sheet-counts { font-size: 0.68rem; color: var(--text-muted); margin-left: 4px; }
+
+    .aqc-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+    .aqc-table tr { border-bottom: 1px solid rgba(255,255,255,.04); }
+    .aqc-table tr:last-child { border-bottom: none; }
+    .aqc-table tr.aqc-gt-row { background: rgba(16,185,129,.05); border-bottom: 1px solid rgba(16,185,129,.12); }
+    .aqc-table tr.aqc-gt-row .aqc-chk-name { color: #10b981; }
+    .aqc-table tr.aqc-gt-row .aqc-chk-exp  { color: #10b981; font-weight: 700; font-size: 0.8rem; }
+    .aqc-table td { padding: 7px 14px; vertical-align: top; }
+    .aqc-chk-name { font-weight: 600; color: var(--text); width: 32%; }
+    .aqc-chk-exp  { color: var(--text-muted); width: 22%; }
+    .aqc-chk-act  { color: var(--text); width: 32%; }
+
+    .aqc-pass { display:inline-flex;align-items:center;gap:3px;background:rgba(16,185,129,.13);color:#10b981;padding:2px 8px;border-radius:20px;font-size:0.68rem;font-weight:700; }
+    .aqc-fail { display:inline-flex;align-items:center;gap:3px;background:rgba(245,158,11,.13);color:#f59e0b;padding:2px 8px;border-radius:20px;font-size:0.68rem;font-weight:700; }
+    .aqc-warn { display:inline-flex;align-items:center;gap:3px;background:rgba(245,158,11,.13);color:#f59e0b;padding:2px 8px;border-radius:20px;font-size:0.68rem;font-weight:700; }
+    .aqc-corr { display:inline-flex;align-items:center;gap:3px;background:rgba(99,102,241,.13);color:#6366f1;padding:2px 8px;border-radius:20px;font-size:0.68rem;font-weight:700; }
+
     /* Pipeline steps */
     .pipeline {
       display: grid;
@@ -771,7 +909,7 @@
 <body>
 
   <!-- ═══════ SIDEBAR ═══════ -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="fr-sidebar">
     <div class="sidebar-logo">
       <div class="logo-icon"><i class='bx bx-film'></i></div>
       <div>
@@ -793,7 +931,8 @@
       <div class="nav-label">SYSTEM</div>
       <a href="crm-excel.html" class="nav-item"><i class='bx bx-credit-card'></i> CRM Excel Processor</a>
       <a href="final-report.html" class="nav-item active"><i class='bx bx-file'></i> Final Report</a>
-      <a href="#" class="nav-item"><i class='bx bx-support'></i> Reach Report</a>
+      <a href="qc-checker.html" class="nav-item"><i class='bx bx-badge-check'></i> QC Checker</a>
+      <a href="reach-report.html" class="nav-item"><i class='bx bx-target-lock'></i> Reach Report</a>
       <a href="#" class="nav-item"><i class='bx bx-cog'></i> Settings</a>
     </nav>
     <div class="sidebar-footer">
@@ -816,6 +955,14 @@
       <div class="page-title-block">
         <h1 class="page-h1">Final Report</h1>
         <p class="page-sub">Split multi-sheet Excel files into structured output — one block = one sheet</p>
+      </div>
+      <!-- Shown only for restricted users (no sidebar) -->
+      <div id="header-user-area">
+        <div>
+          <div id="header-username"></div>
+          <div id="header-role"></div>
+        </div>
+        <button id="header-logout-btn">Logout</button>
       </div>
     </header>
 
@@ -1152,7 +1299,8 @@
 
       <button class="btn-generate" onclick="generateReport(${idx})">
         <i class='bx bx-rocket'></i> Generate My Report
-      </button>`;
+      </button>
+      <div id="aqc-panel-${idx}" style="display:none;margin-top:14px;"></div>`;
     }
 
     async function toggleReadyPanel(idx) {
@@ -1204,6 +1352,103 @@
     }
     window.onCityFileChange = onCityFileChange;
 
+    // ── QC badge helpers ───────────────────────────────────────────────
+    const _QC_BADGE = {
+      PASS:      `<span class="aqc-pass"><i class='bx bx-check'></i> PASS</span>`,
+      FAIL:      `<span class="aqc-fail"><i class='bx bx-x'></i> FAIL</span>`,
+      WARNING:   `<span class="aqc-warn"><i class='bx bx-error'></i> WARN</span>`,
+      CORRECTED: `<span class="aqc-corr"><i class='bx bx-wrench'></i> FIXED</span>`,
+    };
+
+    function _renderAutoQC(idx, data) {
+      const { report_id, filename, qc_status, qc_results, corrections } = data;
+      const api = window._API || 'http://127.0.0.1:8001';
+
+      // Count totals across all sheets
+      let totalFail = 0, totalWarn = 0, totalCorr = 0, totalPass = 0;
+      for (const checks of Object.values(qc_results || {})) {
+        totalFail += checks.filter(c => c.status === 'FAIL').length;
+        totalWarn += checks.filter(c => c.status === 'WARNING').length;
+        totalCorr += checks.filter(c => c.status === 'CORRECTED').length;
+        totalPass += checks.filter(c => c.status === 'PASS').length;
+      }
+
+      // Info chips (corrections applied, warnings remaining)
+      let chipsHtml = '';
+      const fixCount = (corrections && corrections.length) ? corrections.length : totalCorr;
+      if (fixCount > 0)   chipsHtml += `<span class="aqc-info-chip aqc-chip-fixed"><i class='bx bx-wrench'></i> ${fixCount} auto-fixed</span>`;
+      if (totalWarn > 0)  chipsHtml += `<span class="aqc-info-chip aqc-chip-warn"><i class='bx bx-error'></i> ${totalWarn} note${totalWarn > 1 ? 's' : ''}</span>`;
+      if (totalFail > 0)  chipsHtml += `<span class="aqc-info-chip aqc-chip-warn"><i class='bx bx-info-circle'></i> ${totalFail} item${totalFail > 1 ? 's' : ''} need review</span>`;
+      if (!chipsHtml)     chipsHtml  = `<span class="aqc-info-chip aqc-chip-ok"><i class='bx bx-check-double'></i> All checks clean</span>`;
+
+      // Build per-sheet detail rows
+      const toggleId = `aqc-detail-${idx}`;
+      const arrowId  = `aqc-arrow-${idx}`;
+      let sheetsHtml = '';
+      for (const [sheet, checks] of Object.entries(qc_results || {})) {
+        const pC = checks.filter(c => c.status === 'PASS').length;
+        const fC = checks.filter(c => c.status === 'FAIL').length;
+        const wC = checks.filter(c => c.status === 'WARNING').length;
+        const cC = checks.filter(c => c.status === 'CORRECTED').length;
+        const sheetBadge = fC ? _QC_BADGE.FAIL : wC ? _QC_BADGE.WARNING
+                         : cC ? _QC_BADGE.CORRECTED : _QC_BADGE.PASS;
+        sheetsHtml += `
+          <div class="aqc-sheet">
+            <div class="aqc-sheet-hdr">
+              <span class="aqc-sheet-name">${sheet}</span>
+              ${sheetBadge}
+              <span class="aqc-sheet-counts">${pC}P · ${fC}F · ${wC}W · ${cC}C</span>
+            </div>
+            <table class="aqc-table">
+              ${checks.map(c => {
+                const isGT = c.check.startsWith('Grand Total —');
+                return `<tr${isGT ? ' class="aqc-gt-row"' : ''}>
+                  <td class="aqc-chk-name">${c.check}</td>
+                  <td class="aqc-chk-exp">${c.expected || '—'}</td>
+                  <td class="aqc-chk-act">${c.actual   || '—'}</td>
+                  <td>${_QC_BADGE[c.status] || _QC_BADGE.WARN}</td>
+                </tr>`;
+              }).join('')}
+            </table>
+          </div>`;
+      }
+
+      const panel = document.getElementById(`aqc-panel-${idx}`);
+      if (!panel) return;
+      panel.innerHTML = `
+        <div class="aqc-panel">
+
+          <!-- Primary: Report Ready + Download (always green) -->
+          <div class="aqc-ready-bar">
+            <i class='bx bx-check-circle'></i>
+            <span>Report Ready
+              <span class="aqc-ready-sub">— QC checked &amp; corrections applied</span>
+            </span>
+            <a class="aqc-dl-btn" href="${api}/final-report/reports/${report_id}/download" download="${filename}">
+              <i class='bx bx-download'></i> Download Report
+            </a>
+          </div>
+
+          <!-- Info strip: chips showing fix/warn counts -->
+          <div class="aqc-info-strip">${chipsHtml}</div>
+
+          <!-- Collapsible QC detail toggle -->
+          <button class="aqc-toggle-btn" onclick="
+            var d=document.getElementById('${toggleId}');
+            var a=document.getElementById('${arrowId}');
+            d.classList.toggle('visible');
+            a.classList.toggle('open');
+          ">
+            <i class='bx bx-chevron-right aqc-toggle-arrow' id="${arrowId}"></i>
+            QC Details — ${totalPass + totalFail + totalWarn + totalCorr} checks
+          </button>
+
+          <!-- Per-sheet detail (hidden by default) -->
+          <div class="aqc-sheets-wrap" id="${toggleId}">${sheetsHtml}</div>
+        </div>`;
+      panel.style.display = 'block';
+    }
+
     async function generateReport(idx) {
       const langs = [...document.querySelectorAll(`input[name="lang_${idx}[]"]:checked`)].map(c => c.value);
       const cities = [...document.querySelectorAll(`input[name="city_${idx}[]"]:checked`)].map(c => c.value);
@@ -1213,14 +1458,16 @@
       if (!langs.length) { showToast('Select at least one language', 'error'); return; }
       if (!cities.length) { showToast('Select at least one city sheet', 'error'); return; }
 
-      // Detect mode from ad_type badge in the result item
       const entry = document.getElementById(`entry-${idx}`);
       const isVideo = entry && entry.querySelector('.badge-video') !== null;
       const mode = isVideo ? 'video' : 'banner';
 
-      // Disable generate button & show spinner
       const btn = entry && entry.querySelector('.btn-generate');
-      if (btn) { btn.disabled = true; btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> Generating...`; }
+      if (btn) { btn.disabled = true; btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> Generating & Checking...`; }
+
+      // Hide previous QC panel
+      const panel = document.getElementById(`aqc-panel-${idx}`);
+      if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
 
       try {
         const api = window._API || 'http://127.0.0.1:8001';
@@ -1231,32 +1478,28 @@
         form.append('app_urls', urls);
         form.append('mode', mode);
 
-        // Attach optional second file (City / Line Item Data) for CREATIVE sheet
         const cityInput = document.querySelector(`#city-zone-${idx} input[type="file"]`);
-        if (cityInput && cityInput.files[0]) {
-          form.append('file2', cityInput.files[0]);
-        }
+        if (cityInput && cityInput.files[0]) form.append('file2', cityInput.files[0]);
 
         const resp = await fetch(`${api}/final-report/generate`, { method: 'POST', body: form });
-
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({}));
           throw new Error(err.detail || `Server error ${resp.status}`);
         }
 
-        // Trigger file download
-        const blob = await resp.blob();
-        const disposition = resp.headers.get('Content-Disposition') || '';
-        const match = disposition.match(/filename="?([^"]+)"?/);
-        const dlName = match ? match[1] : `report_${fname}`;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = dlName; a.style.display = 'none';
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        const data = await resp.json();
 
-        showToast(`Report downloaded: ${dlName}`, 'success');
-        loadSavedReports(); // refresh saved-reports list
+        // Show inline QC results
+        _renderAutoQC(idx, data);
+
+        const toastMsg = {
+          approved: '✅ Report ready — all QC checks passed',
+          warning:  '✅ Report ready — some notes in QC details',
+          rejected: '✅ Report ready — review QC details below',
+          draft:    '✅ Report generated',
+        };
+        showToast(toastMsg[data.qc_status] || '✅ Report generated', 'success');
+        loadSavedReports();
       } catch (e) {
         showToast(e.message || 'Report generation failed', 'error');
       } finally {
@@ -1371,31 +1614,47 @@
     setTimeout(checkBackend, 500);
   </script>
   <script>
-    (function() {
+    (function () {
       const token = localStorage.getItem('access_token');
       if (!token) { window.location.href = 'login.html'; return; }
 
-      const role         = localStorage.getItem('user_role') || '';
-      const pagesRaw     = localStorage.getItem('allowed_pages');
+      const role = localStorage.getItem('user_role') || '';
+      const pagesRaw = localStorage.getItem('allowed_pages');
       const allowedPages = pagesRaw ? JSON.parse(pagesRaw) : null;
       if (allowedPages !== null && !allowedPages.includes('final_report')) {
         window.location.href = 'login.html'; return;
       }
 
       const username = localStorage.getItem('username') || '';
-      const uEl = document.getElementById('sidebarUsername');
-      const rEl = document.getElementById('sidebarRole');
-      if (uEl) uEl.textContent = username;
-      if (rEl) rEl.textContent = role.replace('_', ' ');
-      const logoutBtn = document.getElementById('logoutBtn');
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('user_role');
-          localStorage.removeItem('username');
-          localStorage.removeItem('allowed_pages');
-          window.location.href = 'login.html';
-        });
+      const isRestricted = allowedPages !== null;
+
+      function _doLogout() {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user_role');
+        localStorage.removeItem('username');
+        localStorage.removeItem('allowed_pages');
+        window.location.href = 'login.html';
+      }
+
+      if (isRestricted) {
+        // Hide sidebar, show header user area
+        document.body.classList.add('no-sidebar');
+        const area = document.getElementById('header-user-area');
+        if (area) area.classList.add('visible');
+        const uEl = document.getElementById('header-username');
+        const rEl = document.getElementById('header-role');
+        if (uEl) uEl.textContent = username;
+        if (rEl) rEl.textContent = role.replace('_', ' ');
+        const btn = document.getElementById('header-logout-btn');
+        if (btn) btn.addEventListener('click', _doLogout);
+      } else {
+        // Super admin — populate sidebar
+        const uEl = document.getElementById('sidebarUsername');
+        const rEl = document.getElementById('sidebarRole');
+        if (uEl) uEl.textContent = username;
+        if (rEl) rEl.textContent = role.replace('_', ' ');
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) logoutBtn.addEventListener('click', _doLogout);
       }
     })();
   </script>

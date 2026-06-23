@@ -637,7 +637,7 @@ DOM_SCAN_SCRIPT = """
             if (!dup) {
                 const id  = el.id ? '#' + el.id : '';
                 const cls = typeof el.className === 'string'
-taskkill /PID <PID> /F                    ? '.' + el.className.trim().split(/\\s+/)[0] : '';
+                    ? '.' + el.className.trim().split(/\\s+/)[0] : '';
                 results.push({
                     x: ax, y: ay,
                     width:  Math.round(r.width),
