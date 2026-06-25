@@ -536,4 +536,10 @@
       errText.textContent = err.message;
       errEl.classList.add('show');
       btn.disabled = false;
-      btn.c
+      btn.classList.remove('loading');
+      arrow.style.display = '';
+    }
+  });
+</script>
+</body>
+</html>
