@@ -24,7 +24,7 @@ router = APIRouter(prefix="/users", tags=["User Management"])
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
-ALL_PAGES = ["scanner", "crm_excel", "ppt_store", "final_report", "reach_report"]
+ALL_PAGES = ["scanner", "crm_excel", "ppt_store", "final_report", "reach_report", "qc_checker"]
 
 
 class CreateUserRequest(BaseModel):

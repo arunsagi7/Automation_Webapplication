@@ -1,5 +1,5 @@
 """
-User ORM model — stored in scanner_db (local).
+User ORM model — stored in ctr_db (Railway), bound to CrmBase.
 
 Roles
 -----

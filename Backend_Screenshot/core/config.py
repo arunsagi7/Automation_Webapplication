@@ -23,7 +23,8 @@ class Settings(BaseSettings):
     # ── Browser engine ────────────────────────────────────────────────────────
     engine_nav_timeout_ms: int = 45_000
     # Cloud RAM guide: free tier (512 MB) → 3, starter (2 GB) → 8, standard (4 GB) → 20
-    engine_concurrency: int = 30
+    # Default 8 — safe for Render Standard. Override via ENGINE_CONCURRENCY env var.
+    engine_concurrency: int = 8
     headless: bool = True
 
     # ── Paths (relative to Backend_Screenshot/) ───────────────────────────────

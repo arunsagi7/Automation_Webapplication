@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
+from sqlalchemy.orm import declarative_base
+from datetime import datetime, timezone
 
 Base = declarative_base()
 
@@ -14,7 +14,7 @@ class ScreenshotResult(Base):
     status = Column(String) # Added status field
     ads_found = Column(Integer, nullable=True)
     matches_found = Column(Integer, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     matched_creative_name = Column(String, nullable=True)
     matched_creative_size = Column(String, nullable=True)
     injection_type = Column(String, nullable=True)

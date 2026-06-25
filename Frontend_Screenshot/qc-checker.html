@@ -1250,11 +1250,17 @@
         if (uEl) uEl.textContent = username;
         if (rEl) rEl.textContent = role.replace('_', ' ');
         const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) logoutBtn.addEventListener('click', _doLogout);
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', () => {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user_role');
+          localStorage.removeItem('username');
+          localStorage.removeItem('allowed_pages');
+          window.location.href = 'login.html';
+          });
+        }
       }
     })();
-  </script>
-
-</body>
-
+    </script>
+  </body>
 </html>

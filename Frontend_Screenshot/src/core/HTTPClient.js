@@ -55,10 +55,12 @@ class HTTPClient {
    * @returns {Promise<any>}
    */
   async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
+    const url = endpoint.startsWith('http') ? endpoint : `${this.baseURL}${endpoint}`;
+    const token = localStorage.getItem('access_token');
     const config = {
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
       ...options,
@@ -83,6 +85,16 @@ class HTTPClient {
       // Response interceptors
       for (const interceptor of this.responseInterceptors) {
         await interceptor(response);
+      }
+
+      // Session expired — send back to login
+      if (response.status === 401) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user_role');
+        localStorage.removeItem('username');
+        localStorage.removeItem('allowed_pages');
+        window.location.href = 'login.html';
+        throw new Error('Session expired');
       }
 
       if (!response.ok) {
@@ -111,11 +123,13 @@ class HTTPClient {
    * @returns {Promise<void>}
    */
   async stream(endpoint, options = {}, onChunk) {
-    const url = `${this.baseURL}${endpoint}`;
+    const url = endpoint.startsWith('http') ? endpoint : `${this.baseURL}${endpoint}`;
+    const token = localStorage.getItem('access_token');
     const config = {
       method: options.method || 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
       body: options.body ? JSON.stringify(options.body) : undefined,
@@ -123,6 +137,15 @@ class HTTPClient {
 
     try {
       const response = await fetch(url, config);
+
+      if (response.status === 401) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user_role');
+        localStorage.removeItem('username');
+        localStorage.removeItem('allowed_pages');
+        window.location.href = 'login.html';
+        throw new Error('Session expired');
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -154,46 +177,17 @@ class HTTPClient {
 
       if (buffer.trim()) {
         try {
-          const data = JSON.parse(buffer);
+          const data = JSON.parse(buffer.trim());
           onChunk(data);
         } catch (e) {
-          console.warn('Failed to parse final stream chunk:', buffer);
+          console.warn('Failed to parse remaining buffer:', buffer);
         }
       }
-    } catch (error) {
-      this._handleError(error);
-      throw error;
+    } catch (e) {
+      console.error('Stream request failed:', e);
+      throw e;
     }
-  }
-
-  /**
-   * Add request interceptor
-   * @param {Function} interceptor - Interceptor function
-   */
-  addRequestInterceptor(interceptor) {
-    this.requestInterceptors.push(interceptor);
-  }
-
-  /**
-   * Add response interceptor
-   * @param {Function} interceptor - Interceptor function
-   */
-  addResponseInterceptor(interceptor) {
-    this.responseInterceptors.push(interceptor);
-  }
-
-  /**
-   * Handle errors with logging
-   * @private
-   * @param {Error} error
-   */
-  _handleError(error) {
-    console.error('HTTP Error:', {
-      message: error.message,
-      status: error.status,
-      timestamp: new Date().toISOString(),
-    });
   }
 }
 
-export default new HTTPClient();
+export default HTTPClient;

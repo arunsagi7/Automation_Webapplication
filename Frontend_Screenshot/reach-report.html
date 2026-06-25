@@ -593,6 +593,15 @@
           <div id="backend-status" class="sys-status-sub">Checking...</div>
         </div>
       </div>
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(99,102,241,0.1);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div>
+          <div id="sidebarUsername" style="font-size:0.78rem;font-weight:600;color:#e3e3e8;">—</div>
+          <div id="sidebarRole" style="font-size:0.68rem;color:#6b7280;text-transform:capitalize;">—</div>
+        </div>
+        <button id="logoutBtn" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:6px;cursor:pointer;color:#ef4444;font-size:0.72rem;padding:4px 8px;white-space:nowrap;">
+          <i class='bx bx-log-out'></i> Logout
+        </button>
+      </div>
       <div class="version-txt">Version 2.1.0</div>
     </div>
   </aside>
@@ -1232,11 +1241,17 @@
         if (btn) btn.addEventListener('click', doLogout);
       } else {
         const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) logoutBtn.addEventListener('click', doLogout);
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', () => {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user_role');
+          localStorage.removeItem('username');
+          localStorage.removeItem('allowed_pages');
+          window.location.href = 'login.html';
+          });
+        }
       }
     })();
-  </script>
-
-</body>
-
+    </script>
+  </body>
 </html>

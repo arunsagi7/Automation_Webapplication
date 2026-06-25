@@ -41,7 +41,8 @@ def _get_conn():
 # ---------------------------------------------------------------------------
 
 def get_urls_from_sheets(sheet_names: list[str]) -> list[str]:
-    """Return distinct cleaned URLs from app_url_reference for given sheets."""
+    """Return URLs from app_url_reference ordered by priority tier (user_site first,
+    then more_important, important, regular), shuffled within each tier."""
     if not sheet_names:
         return []
     try:
@@ -49,12 +50,28 @@ def get_urls_from_sheets(sheet_names: list[str]) -> list[str]:
         cur  = conn.cursor()
         placeholders = ",".join(["%s"] * len(sheet_names))
         cur.execute(
-            f"SELECT DISTINCT url FROM app_url_reference WHERE sheet_name IN ({placeholders}) ORDER BY url",
+            f"""SELECT DISTINCT url, COALESCE(priority, 'regular') AS priority
+                FROM app_url_reference
+                WHERE sheet_name IN ({placeholders})""",
             sheet_names,
         )
-        urls = [row[0] for row in cur.fetchall()]
+        rows = cur.fetchall()
         cur.close(); conn.close()
-        return urls
+
+        # Group by priority tier
+        tier_order = ['user_site', 'more_important', 'important', 'regular']
+        grouped: dict[str, list[str]] = {t: [] for t in tier_order}
+        for url, priority in rows:
+            tier = priority if priority in grouped else 'regular'
+            grouped[tier].append(url)
+
+        # Shuffle within each tier for variety, but preserve tier ordering
+        result: list[str] = []
+        for tier in tier_order:
+            tier_urls = grouped[tier]
+            random.shuffle(tier_urls)
+            result.extend(tier_urls)
+        return result
     except Exception as e:
         print(f"[DB] get_urls_from_sheets failed: {e}")
         return []
@@ -652,7 +669,7 @@ def write_reach_sheet(ws, rows: list[dict]) -> None:
             cell.number_format = "0.00%"
         elif h in ("Impressions", "Clicks", "Reach", "Frequency"):
             cell.value         = int(val) if val != "" else 0
-            cell.number_format = "#,##0"
+            cell.number_format = "0"
         else:
             cell.value = val
 
@@ -1582,26 +1599,33 @@ def build_sheet9_creative(df: pd.DataFrame, total_imp: int, total_clk: int, ctr_
             src_li_clean = src_li.str.replace(r'^[A-Za-z]{2}\d+\|', '', regex=True).str.strip()
             prefix_mask  = src_li_clean.str.lower().isin(df_li_norm)
 
-            def _token_match(val) -> bool:
-                toks = _li_tokens(val)
-                if not toks: return False
-                for ref in df_li_tok:
-                    if ref and len(toks & ref) / max(len(ref), 1) >= 0.6:
-                        return True
-                return False
-            token_mask = src_li.apply(_token_match)
-
             if exact_mask.any():
                 source = source[exact_mask].copy(); _filtered = True
             elif prefix_mask.any():
                 source = source[prefix_mask].copy(); _filtered = True
-            elif token_mask.any():
-                source = source[token_mask].copy(); _filtered = True
+            else:
+                # Token match — run only on UNIQUE values (not every row)
+                # df2 may have 100k rows but only ~50 unique line items → 2000x faster
+                def _token_match(val) -> bool:
+                    toks = _li_tokens(val)
+                    if not toks: return False
+                    for ref in df_li_tok:
+                        if ref and len(toks & ref) / max(len(ref), 1) >= 0.6:
+                            return True
+                    return False
+                unique_vals   = src_li.unique()
+                unique_result = {v: _token_match(v) for v in unique_vals}
+                token_mask    = src_li.map(unique_result)
+                if token_mask.any():
+                    source = source[token_mask].copy(); _filtered = True
 
         if not _filtered and li_hint and li_col_src:
             hint_toks = _li_tokens(li_hint)
             if hint_toks:
-                counts  = source[li_col_src].apply(lambda v: len(hint_toks & _li_tokens(v)))
+                # Same optimisation: match on unique values only
+                unique_vals   = source[li_col_src].fillna("").astype(str).unique()
+                unique_counts = {v: len(hint_toks & _li_tokens(v)) for v in unique_vals}
+                counts  = source[li_col_src].fillna("").astype(str).map(unique_counts)
                 max_cnt = counts.max()
                 if max_cnt > 0:
                     source = source[counts == max_cnt].copy(); _filtered = True
@@ -1609,7 +1633,9 @@ def build_sheet9_creative(df: pd.DataFrame, total_imp: int, total_clk: int, ctr_
         if not _filtered and li_hint and creative_col:
             hint_toks = _li_tokens(li_hint)
             if hint_toks:
-                counts  = source[creative_col].apply(lambda v: len(hint_toks & _li_tokens(str(v))))
+                unique_cr     = source[creative_col].fillna("").astype(str).unique()
+                unique_cr_cnt = {v: len(hint_toks & _li_tokens(v)) for v in unique_cr}
+                counts  = source[creative_col].fillna("").astype(str).map(unique_cr_cnt)
                 max_cnt = counts.max()
                 if max_cnt > 0:
                     source = source[counts == max_cnt].copy()
@@ -1740,6 +1766,10 @@ def build_sheet8_city(total_imp: int, total_clk: int, ctr_reach: str,
     rows  = [{"City": city_list[i]["name"], "Impressions": city_imps[i],
               "Clicks": city_clks[i], "Click Rate (CTR)": pct(city_clks[i], city_imps[i])}
              for i in range(len(city_list))]
+
+    # Remove cities with zero impressions AND zero clicks
+    rows = [r for r in rows if r["Impressions"] != 0 or r["Clicks"] != 0]
+
     total = {"City": "Grand Total", "Impressions": total_imp, "Clicks": total_clk,
              "Click Rate (CTR)": pct(total_clk, total_imp)}
     return rows, total
@@ -1758,22 +1788,23 @@ def build_sheet10_apps(total_imp: int, total_clk: int,
     user_apps = [_clean_url(u) for u in user_urls_text.splitlines()
                  if _clean_url(u) not in _JUNK]
     user_set  = set(user_apps)
+    # Priority order preserved from get_urls_from_sheets:
+    # user_site → more_important → important → regular (shuffled within each tier)
     db_urls   = [u for u in get_urls_from_sheets(language_sheet_names)
                  if u not in user_set and u not in _JUNK]
-    random.shuffle(db_urls)
 
     if total_imp < 50_000:
-        target = random.randint(40, 50);   top_lo, top_hi = 10_000, 12_000
+        target = random.randint(30, 40);  top_lo, top_hi = 10_000, 12_000
     elif total_imp < 70_000:
-        target = random.randint(50, 60);   top_lo, top_hi = 12_000, 15_000
+        target = random.randint(30, 40);  top_lo, top_hi = 12_000, 15_000
     elif total_imp < 100_000:
-        target = random.randint(60, 70);   top_lo, top_hi = 15_000, 20_000
+        target = random.randint(30, 40);  top_lo, top_hi = 15_000, 20_000
     elif total_imp < 500_000:
-        target = random.randint(110, 120); top_lo, top_hi = 18_000, 35_000
+        target = random.randint(35, 45);  top_lo, top_hi = 18_000, 35_000
     elif total_imp < 1_000_000:
-        target = random.randint(110, 120); top_lo, top_hi = 40_000, 50_000
+        target = random.randint(45, 70);  top_lo, top_hi = 40_000, 50_000
     else:
-        target = random.randint(110, 120); top_lo, top_hi = 70_000, 80_000
+        target = random.randint(70, 110); top_lo, top_hi = 90_000, 100_000
 
     n_user  = len(user_apps)
     filler  = db_urls[:max(0, target - n_user)]
@@ -2028,7 +2059,6 @@ def generate_report(
     ctr_reach = pct(total_clk, total_imp)
 
     s1 = build_sheet1_reach(total_imp, total_clk)
-    # REACH is a single summary row — no multi-row sanitization needed
 
     s2, s2t = build_sheet2_date(df_date, total_imp, total_clk, ctr_reach, is_banner)
     s2, s2t = _sanitize_sheet_data(s2, s2t, total_imp, total_clk, ctr_reach)
@@ -2057,16 +2087,20 @@ def generate_report(
             print(f"[report] creative_file_bytes load failed: {e}")
 
     # li_hint: priority -> banner_li_hint -> sheet name -> filename stem
+    # Use zipfile to read only xl/workbook.xml — avoids loading the full workbook (fast)
     if banner_parsed is not None and banner_li_hint:
         li_hint = banner_li_hint
     else:
         try:
-            import openpyxl as _opxl
-            _wb_tmp = _opxl.load_workbook(
-                io.BytesIO(campaign_file_bytes), read_only=True, data_only=True
-            )
-            _sheet0 = _wb_tmp.sheetnames[0].strip() if _wb_tmp.sheetnames else ""
-            _wb_tmp.close()
+            import zipfile as _zf
+            import xml.etree.ElementTree as _ET
+            _sheet0 = ""
+            with _zf.ZipFile(io.BytesIO(campaign_file_bytes)) as _z:
+                with _z.open("xl/workbook.xml") as _f:
+                    _tree = _ET.parse(_f)
+                    _ns = {"ns": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+                    _sheets = _tree.findall(".//ns:sheet", _ns)
+                    _sheet0 = _sheets[0].get("name", "").strip() if _sheets else ""
             li_hint = _sheet0 if (_sheet0 and not re.match(r"^sheet[_\s]?\d*$", _sheet0, re.I)) \
                       else (campaign_filename.rsplit(".", 1)[0] if "." in campaign_filename else campaign_filename)
         except Exception:
@@ -2083,9 +2117,6 @@ def generate_report(
     s10, s10t = _sanitize_sheet_data(s10, s10t, total_imp, total_clk, ctr_reach)
 
     # ── Step 2: Pre-write cross-sheet QC fix ────────────────────────────────
-    # Check all sheets against REACH reference on raw Python dicts —
-    # BEFORE any data touches the workbook.  Eliminates openpyxl
-    # formula-reading issues and removes the need for post-write auto-correct.
     _pre_write_qc_fix(
         sheets=[
             ("DATE",        s2,  s2t),

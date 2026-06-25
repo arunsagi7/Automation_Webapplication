@@ -23,7 +23,7 @@ const CONFIG = {
       PROCESS: '/process',
       RESULTS: '/results',
       RESULTS_DELETE: (id) => `/results/${id}`,
-      EXPORT_PDF: '/results/export-pdf',
+      EXPORT_PPT: '/results/export-ppt',
       PPT_ASSETS: '/ppt-export-assets',
       IMAGE_BASE64: '/get-image-base64',
     },

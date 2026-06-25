@@ -352,14 +352,8 @@ async def generate_final_report(
         corrected_bytes, corrections, all_qc = _auto_correct_report(report_bytes, all_qc)
         final_bytes = corrected_bytes if corrections else report_bytes
 
-        # If corrections were applied, re-run QC on the corrected file for true final status
-        if corrections:
-            try:
-                all_qc = _run_all_qc(
-                    corrected_bytes, impressions, clicks, ctr_raw, reach, frequency,
-                )
-            except Exception as _re_err:
-                logger.warning("Re-run QC after correction failed: %s", _re_err)
+        # _auto_correct_report already returns updated_qc_results with FAIL→CORRECTED
+        # No need to re-run full QC again — saves 60–90s on every corrected report
 
         # Overall status from final (post-correction) QC results
         # If corrections were applied the report is at best-effort quality — cap at "warning"
@@ -537,7 +531,7 @@ async def update_app_urls(file: UploadFile = File(...)):
             # Skip header row (row 0), extract from data rows
             data_rows = rows_iter[1:]
 
-            # Box columns: (id_col, url_col)
+            # Box columns: (id_col, url_col) — priority managed directly in DB
             boxes = [(0, 1), (4, 5), (8, 9)]
             records = []
             for row in data_rows:
@@ -551,16 +545,27 @@ async def update_app_urls(file: UploadFile = File(...)):
                         continue
                     records.append((sheet_name.strip(), int(uid) if uid else None, url_str))
 
-            # DELETE existing rows for this sheet_name, then INSERT fresh
+            sname = sheet_name.strip()
+
+            # Preserve existing priorities — save url→priority map before delete
             cur.execute(
-                "DELETE FROM app_url_reference WHERE sheet_name = %s",
-                (sheet_name.strip(),),
+                "SELECT url, priority FROM app_url_reference WHERE sheet_name = %s",
+                (sname,),
             )
+            existing_priority = {row[0]: row[1] for row in cur.fetchall()}
+
+            cur.execute("DELETE FROM app_url_reference WHERE sheet_name = %s", (sname,))
+
             if records:
+                # Restore priority for existing URLs; new URLs get default 'regular'
+                records_with_priority = [
+                    (sn, uid, url, existing_priority.get(url, 'regular'))
+                    for sn, uid, url in records
+                ]
                 _ev(
                     cur,
-                    "INSERT INTO app_url_reference (sheet_name, url_id, url) VALUES %s",
-                    records,
+                    "INSERT INTO app_url_reference (sheet_name, url_id, url, priority) VALUES %s",
+                    records_with_priority,
                     page_size=500,
                 )
             conn.commit()
@@ -2361,7 +2366,7 @@ def _run_all_qc(file_bytes, impressions, clicks, ctr_raw, reach, frequency,
     Auto-detects Banner vs Video from DATE sheet headers.
     """
     import openpyxl as _xl
-    wb = _xl.load_workbook(io.BytesIO(file_bytes), read_only=False, data_only=True)
+    wb = _xl.load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
 
     results = {}
 

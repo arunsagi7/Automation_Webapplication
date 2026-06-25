@@ -153,34 +153,27 @@ async def startup_event():
     try:
         from database.crm_db import CrmSessionLocal
         from models.user import User
-        from core.security import hash_password
+        from core.security import get_password_hash
+        from models.user import User
         db = CrmSessionLocal()
         try:
-            existing_admin = db.query(User).filter(User.username == "admin").first()
-            if existing_admin:
-                # Reset admin password to known value
-                existing_admin.hashed_password = hash_password("Admin@123")
-                existing_admin.role = "super_admin"
-                db.commit()
-                logger.info("Admin password reset to Admin@123")
-            else:
-                default_admin = User(
+            if db.query(User).count() == 0:
+                su = User(
                     username="admin",
-                    hashed_password=hash_password("Admin@123"),
+                    hashed_password=get_password_hash("admin123"),
                     role="super_admin",
-                    email="admin@example.com",
-                    allowed_pages=["scanner", "crm_excel", "ppt_store", "final_report", "reach_report"],
+                    is_active=True,
+                    allowed_pages=None,
                 )
-                db.add(default_admin)
+                db.add(su)
                 db.commit()
                 logger.info("Default super_admin created (username=admin)")
         finally:
             db.close()
     except Exception as e:
-        logger.warning("Could not auto-create admin: %s", e)
+        logger.warning("Could not auto-create super_admin: %s", e)
 
 
-# ── Frontend UI (served from /ui/) ────────────────────────────────────────────
-if os.path.isfile(os.path.join(FRONTEND_DIR, "index.html")):
+# ── Frontend SPA (must be LAST) ───────────────────────────────────────────────
+if os.path.isdir(FRONTEND_DIR):
     app.mount("/ui", StaticFiles(directory=FRONTEND_DIR, html=True), name="ui")
-    logger.info("Frontend UI mounted at /ui/")

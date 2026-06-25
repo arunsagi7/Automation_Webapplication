@@ -66,8 +66,8 @@
           <div id="sidebarRole" style="font-size:0.68rem;color:#6b7280;text-transform:capitalize;">—</div>
         </div>
         <button id="logoutBtn" title="Logout"
-          style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:1.1rem;padding:2px;">
-          <i class='bx bx-log-out'></i>
+          style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:6px;cursor:pointer;color:#ef4444;font-size:0.72rem;padding:4px 8px;display:flex;align-items:center;gap:4px;white-space:nowrap;">
+          <i class='bx bx-log-out'></i> Logout
         </button>
       </div>
       <div class="version-txt">Version 2.1.0</div>
@@ -404,4 +404,12 @@
         logoutBtn.addEventListener('click', () => {
           localStorage.removeItem('access_token');
           localStorage.removeItem('user_role');
-          localStorage.removeIt
+          localStorage.removeItem('username');
+          localStorage.removeItem('allowed_pages');
+          window.location.href = 'login.html';
+        });
+      }
+    })();
+    </script>
+  </body>
+</html>
