@@ -23,10 +23,12 @@ POST /final-report/reports/{id}/send-to-qc
 """
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
 import os
 import re
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -175,13 +177,14 @@ async def final_report_process(file: UploadFile = File(...)):
         logger.exception("split_excel_to_files failed")
         raise HTTPException(status_code=500, detail=f"Processing error: {e}")
 
-    stem = (file.filename or "output").rsplit(".", 1)[0]
-    results = []
+    stem      = (file.filename or "output").rsplit(".", 1)[0]
+    uid       = uuid.uuid4().hex[:8]          # unique per upload — prevents collision
+    results   = []
 
     for block in blocks:
         sheet_name = block["sheet_name"]
         safe_name  = _safe_filename(sheet_name)
-        out_name   = f"{stem}_{safe_name}.xlsx"
+        out_name   = f"{stem}_{safe_name}_{uid}.xlsx"
         out_path   = os.path.join(_FINAL_DIR, out_name)
 
         # Save to disk
@@ -280,14 +283,18 @@ async def generate_final_report(
         if file2 and file2.filename:
             creative_bytes = await file2.read()
 
-        report_bytes = generate_report(
-            campaign_file_bytes  = file_bytes,
-            campaign_filename    = safe_name,
-            language_sheet_names = lang_list,
-            city_sheet_names     = city_list,
-            user_urls_text       = app_urls,
-            mode                 = mode,
-            creative_file_bytes  = creative_bytes,
+        loop = asyncio.get_event_loop()
+        report_bytes = await loop.run_in_executor(
+            None,
+            lambda: generate_report(
+                campaign_file_bytes  = file_bytes,
+                campaign_filename    = safe_name,
+                language_sheet_names = lang_list,
+                city_sheet_names     = city_list,
+                user_urls_text       = app_urls,
+                mode                 = mode,
+                creative_file_bytes  = creative_bytes,
+            )
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -296,7 +303,8 @@ async def generate_final_report(
         raise HTTPException(status_code=500, detail=f"Report generation error: {e}")
 
     stem          = safe_name.rsplit(".", 1)[0]
-    report_name   = f"report_{stem}.xlsx"
+    report_uid    = uuid.uuid4().hex[:8]
+    report_name   = f"report_{stem}_{report_uid}.xlsx"
     campaign_name = stem
 
     # ── Save to DB first (get report_id) ─────────────────────────────────────
