@@ -1772,6 +1772,11 @@ def build_sheet8_city(total_imp: int, total_clk: int, ctr_reach: str,
 
     total = {"City": "Grand Total", "Impressions": total_imp, "Clicks": total_clk,
              "Click Rate (CTR)": pct(total_clk, total_imp)}
+
+    # Cap per-city CTR at _SANITIZE_MAX_CTR (same cap as all other sheets)
+    rows, total = _sanitize_sheet_data(rows, total, total_imp, total_clk,
+                                        pct(total_clk, total_imp),
+                                        imp_key="Impressions", clk_key="Clicks")
     return rows, total
 
 
