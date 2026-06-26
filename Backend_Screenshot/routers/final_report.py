@@ -2024,11 +2024,14 @@ def _run_creative_qc(wb):
                               f"{g:,.0f}", f"Sum={s:,.0f}  GT={g:,.0f}  diff={d:,.0f}",
                               "PASS" if d <= 1 else "FAIL"))
 
-    # ── 5–7. Tier CTR-weight checks ───────────────────────────────────────────
-    _TIER1 = {"250x250","300x250","300x600","160x600","728x90",
-               "970x90","970x250","120x600"}
-    _TIER2 = {"300x50","320x50","320x100","336x280","320x480"}
-    _TIER3 = {"320x250","480x320","768x102","1024x768"}
+    # ── 5–8. Tier impression-weight checks ───────────────────────────────────────
+    # Tier 1: premium large sizes — should take 75–85% of total impressions
+    # Tier 2: mid sizes — should take 20–35% of total impressions, CTR 0.32%–0.56%
+    # Tier 3: small/portrait sizes — should take 5–10% of total impressions
+    _TIER1 = {"300x250", "300x600", "320x480", "728x90", "320x50"}
+    _TIER2 = {"970x90", "160x600", "970x250", "250x250", "336x280",
+              "300x50", "320x100", "468x60"}
+    _TIER3 = {"480x320", "320x250", "768x1024", "1024x768"}
 
     def _tier_of(name: str):
         nl = name.lower()
@@ -2046,62 +2049,68 @@ def _run_creative_qc(wb):
     if not any_classified:
         # Creative names don't contain size strings — skip tier checks
         results.append(_qchk(
-            "Tier Distribution (Clicks)",
-            "Tier 1 45-55% | Tier 2 30-40% | Tier 3 ~20%",
+            "Tier Impression Distribution",
+            "Tier 1 75-85% | Tier 2 20-35% | Tier 3 5-10% of total impressions",
             "Size dimensions in creative names",
             "Cannot determine tier — no size strings (e.g. '300x250') found in creative names",
             "WARNING",
         ))
     else:
-        total_clk = sum(clks) or 1
-        t1_clk = sum(clks[i] for i, t in enumerate(tiers) if t == 1)
-        t2_clk = sum(clks[i] for i, t in enumerate(tiers) if t == 2)
-        t3_clk = sum(clks[i] for i, t in enumerate(tiers) if t == 3)
+        total_imp_t = sum(imps) or 1
+        t1_imp = sum(imps[i] for i, t in enumerate(tiers) if t == 1)
+        t2_imp = sum(imps[i] for i, t in enumerate(tiers) if t == 2)
+        t3_imp = sum(imps[i] for i, t in enumerate(tiers) if t == 3)
 
-        t1_pct = t1_clk / total_clk * 100
-        t2_pct = t2_clk / total_clk * 100
-        t3_pct = t3_clk / total_clk * 100
+        t1_pct = t1_imp / total_imp_t * 100
+        t2_pct = t2_imp / total_imp_t * 100
+        t3_pct = t3_imp / total_imp_t * 100
 
-        # Tier 1 — 45% to 55%
-        t1_ok = 45.0 <= t1_pct <= 55.0
+        # Tier 1 — 75% to 85% impressions
+        t1_ok = 75.0 <= t1_pct <= 85.0
         results.append(_qchk(
-            "Tier 1 — Click Weight (45%–55%)",
-            "Tier 1 sizes (300x250, 728x90, 970x250 …) should drive 45–55% of clicks",
-            "45% – 55%",
-            f"{t1_pct:.1f}%  ({t1_clk:,.0f} clicks  |  {sum(1 for t in tiers if t==1)} creatives)",
+            "Tier 1 — Impression Weight (75%–85%)",
+            "Tier 1 sizes (300x250, 300x600, 320x480, 728x90, 320x50) should get 75–85% of impressions",
+            "75% – 85%",
+            f"{t1_pct:.1f}%  ({t1_imp:,.0f} imps  |  {sum(1 for t in tiers if t==1)} creatives)",
             "PASS" if t1_ok else "FAIL",
         ))
 
-        # Tier 2 — 30% to 40%
-        t2_ok = 30.0 <= t2_pct <= 40.0
+        # Tier 2 — 20% to 35% impressions
+        t2_ok = 20.0 <= t2_pct <= 35.0
         results.append(_qchk(
-            "Tier 2 — Click Weight (30%–40%)",
-            "Tier 2 sizes (320x50, 300x50, 320x480 …) should drive 30–40% of clicks",
-            "30% – 40%",
-            f"{t2_pct:.1f}%  ({t2_clk:,.0f} clicks  |  {sum(1 for t in tiers if t==2)} creatives)",
+            "Tier 2 — Impression Weight (20%–35%)",
+            "Tier 2 sizes (970x90, 160x600, 970x250, 250x250, 336x280, 300x50, 320x100, 468x60) should get 20–35% of impressions",
+            "20% – 35%",
+            f"{t2_pct:.1f}%  ({t2_imp:,.0f} imps  |  {sum(1 for t in tiers if t==2)} creatives)",
             "PASS" if t2_ok else "FAIL",
         ))
 
-        # Tier 3 — ~20% (allow 15–25%)
-        t3_ok = 15.0 <= t3_pct <= 25.0
-        results.append(_qchk(
-            "Tier 3 — Click Weight (~20%)",
-            "Tier 3 sizes (320x250, 480x320, 1024x768 …) should drive ~20% of clicks",
-            "15% – 25%",
-            f"{t3_pct:.1f}%  ({t3_clk:,.0f} clicks  |  {sum(1 for t in tiers if t==3)} creatives)",
-            "PASS" if t3_ok else "FAIL",
-        ))
+        # All creatives — CTR range 0.32% to 0.56%
+        if ctr_key:
+            all_ctr_out = [
+                (names[i][:50], _qpct(rows[i].get(ctr_key)))
+                for i in range(len(rows))
+                if _qpct(rows[i].get(ctr_key)) > 0
+                and not (0.32 <= _qpct(rows[i].get(ctr_key)) <= 0.56)
+            ]
+            results.append(_qchk(
+                "All Creatives — CTR Range (0.32%–0.56%)",
+                "Every creative CTR should be between 0.32% and 0.56%",
+                "0.32% – 0.56%",
+                (f"{len(all_ctr_out)} creative(s) outside range: "
+                 + ", ".join(f"{n} ({c:.3f}%)" for n, c in all_ctr_out[:5]))
+                if all_ctr_out else f"All {len(rows)} creatives within 0.32%–0.56%",
+                "FAIL" if all_ctr_out else "PASS",
+            ))
 
-        # Tier 3 — no zero-click rows
-        t3_zero = [names[i][:50] for i, t in enumerate(tiers) if t == 3 and clks[i] == 0]
+        # Tier 3 — 5% to 10% impressions
+        t3_ok = 5.0 <= t3_pct <= 10.0
         results.append(_qchk(
-            "Tier 3 — No Zero-Click Rows",
-            "Every Tier 3 creative must have at least 1 click",
-            "Clicks > 0 for all Tier 3",
-            (f"{len(t3_zero)} Tier 3 creative(s) with 0 clicks: "
-             + ", ".join(t3_zero[:5]))
-            if t3_zero else f"All Tier 3 creatives have clicks",
-            "FAIL" if t3_zero else "PASS",
+            "Tier 3 — Impression Weight (5%–10%)",
+            "Tier 3 sizes (480x320, 320x250, 768x1024, 1024x768) should get 5–10% of impressions",
+            "5% – 10%",
+            f"{t3_pct:.1f}%  ({t3_imp:,.0f} imps  |  {sum(1 for t in tiers if t==3)} creatives)",
+            "PASS" if t3_ok else "FAIL",
         ))
 
     return results
