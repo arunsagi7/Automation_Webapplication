@@ -1809,7 +1809,9 @@ def build_sheet10_apps(total_imp: int, total_clk: int,
     elif total_imp < 1_000_000:
         target = random.randint(45, 70);  top_lo, top_hi = 40_000, 50_000
     else:
-        target = random.randint(70, 110); top_lo, top_hi = 90_000, 100_000
+        target = random.randint(70, 110)
+        top_lo = int(total_imp * 0.09)   # 9% of total — scales with campaign size
+        top_hi = int(total_imp * 0.12)   # 12% of total — user URL always stays top
 
     n_user  = len(user_apps)
     filler  = db_urls[:max(0, target - n_user)]
