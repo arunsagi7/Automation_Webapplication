@@ -49,6 +49,20 @@ extracted_ppt_media/
 test.png
 .pytest_cache/
 
+# ── One-time utility scripts (contain hardcoded credentials) ──────────────────
+verify_railway_db.py
+add_priority_column.py
+create_qc_user.py
+reset_passwords.py
+restore_permissions.py
+fix_admin_pages.py
+migrate_*.py
+setup_railway_db.py
+rebuild_app_url_reference.py
+reference_db_city_patch.py
+update_app_urls.py
+migration_log.txt
+
 # ── Logs ──────────────────────────────────────────────────────────────────────
 *.log
 server.out.log
