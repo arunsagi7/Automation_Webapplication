@@ -27,6 +27,9 @@ class ReachData:
     ctr: float
     reach: float
     frequency: float
+    complete_views: float = 0.0
+    vcr: float = 0.0
+
 
 
 @dataclass
@@ -92,6 +95,12 @@ _AUDIENCE_KEYWORDS = [
     "vietnamese", "punjabi", "arabic", "chinese", "korean",
     "hindi", "tamil", "cantonese", "greek", "italian",
     "spanish", "mandarin", "urdu", "bengali", "turkish",
+    "filipino", "indian", "tagalog", "nepali", "samoan", "tongan",
+    "assyrian", "khmer", "somali", "dari", "pashto", "hazaragi",
+    "japanese", "polish", "russian", "ukrainian", "macedonian",
+    "serbian", "croatian", "bosnian", "amharic", "thai",
+    "indonesian", "malay", "persian", "farsi", "hebrew",
+    "maltese", "portuguese", "sinhala", "oromo", "rohingya", "tigrinya",
 ]
 
 
@@ -122,11 +131,12 @@ def parse_filename(filename: str) -> Tuple[str, str]:
 
     Accepts patterns like:
       Vietnamese_Burst_1.xlsx
-      Punjabi-burst-2_report.xlsx
-      Arabic Burst 3.xlsx
+      CA01390_MPN_Secondary_VIC_Indian_Connection_Video_Final_Report_Mar'26.xlsx
+      CA01556_final report_Filipino - BC - YT - Video_60SE (1).xlsx
     """
     name_lower = filename.lower()
 
+    # 1. Match known audience keywords
     audience = None
     for kw in _AUDIENCE_KEYWORDS:
         if kw in name_lower:
@@ -134,25 +144,39 @@ def parse_filename(filename: str) -> Tuple[str, str]:
             break
 
     if audience is None:
-        # Fallback: use whatever is before "burst" in the filename
+        # Fallback 1: check for word before 'burst'
         m = re.search(r"([a-zA-Z]+)[_\-\s]+burst", name_lower)
         if m:
             audience = m.group(1).title()
         else:
-            raise ValueError(
-                f"Cannot determine audience from filename: {filename!r}. "
-                f"Expected one of: {', '.join(k.title() for k in _AUDIENCE_KEYWORDS)}"
+            # Fallback 2: strip common metadata tags to isolate audience name
+            clean_name = re.sub(
+                r"(ca\d+|final[_\s]*report|video|mpn|cpn|secondary|primary|vic|nsw|qld|wa|sa|act|tas|nt|\d+se|\(\d+\)|\.xlsx)",
+                "",
+                name_lower,
+                flags=re.IGNORECASE,
             )
+            words = [
+                w.title()
+                for w in re.findall(r"[a-zA-Z]{3,}", clean_name)
+                if w.lower() not in ("mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec", "jan", "feb", "report")
+            ]
+            audience = words[0] if words else "General"
 
+    # 2. Match burst number
     burst_match = re.search(r"burst[_\-\s]*(\d+)", name_lower)
-    if not burst_match:
-        raise ValueError(
-            f"Cannot find burst number in filename: {filename!r}. "
-            "Expected 'BurstN' or 'Burst_N' or 'Burst N'."
-        )
-    burst_number = burst_match.group(1)
+    if burst_match:
+        burst_number = burst_match.group(1)
+    else:
+        # Fallback: check for (1), _1, -1, or default to "1"
+        b_m = re.search(r"[\(_\-\s](\d+)[\)\._\-\s]", name_lower)
+        if b_m:
+            burst_number = b_m.group(1)
+        else:
+            burst_number = "1"
 
     return audience, burst_number
+
 
 
 def parse_campaign_file(filepath: str) -> CampaignData:
@@ -171,7 +195,14 @@ def parse_campaign_file(filepath: str) -> CampaignData:
     creative_breakdown= _parse_creative_sheet(wb["CREATIVE"])
     age_breakdown     = _parse_age_sheet(wb["AGE"])
     gender_breakdown  = _parse_gender_sheet(wb["GENDER"])
-    start_date, end_date = _parse_date_sheet(wb["DATE"])
+    start_date, end_date, complete_views, vcr = _parse_date_sheet(wb["DATE"])
+
+    # Inject video metrics into reach_data
+    reach_data.complete_views = complete_views
+    if vcr == 0.0 and complete_views > 0 and reach_data.actual_impressions > 0:
+        reach_data.vcr = complete_views / reach_data.actual_impressions
+    else:
+        reach_data.vcr = vcr
 
     return CampaignData(
         audience=audience,
@@ -226,15 +257,26 @@ def _is_total_row(value) -> bool:
 
 
 def _parse_reach_sheet(sheet) -> ReachData:
-    """REACH sheet — row 2 contains: impressions, clicks, ctr, reach, frequency."""
+    """REACH sheet — row 2 contains: impressions, clicks, ctr, reach, frequency.
+    Complete Views and VCR are extracted separately from the DATE sheet.
+    """
     r = 2
+    actual_impressions = _v(sheet.cell(r, 1).value)
+    link_clicks = _v(sheet.cell(r, 2).value)
+    ctr = _v(sheet.cell(r, 3).value)
+    reach = _v(sheet.cell(r, 4).value)
+    frequency = _v(sheet.cell(r, 5).value) or 3.0
+
     return ReachData(
-        actual_impressions=_v(sheet.cell(r, 1).value),
-        link_clicks=_v(sheet.cell(r, 2).value),
-        ctr=_v(sheet.cell(r, 3).value),
-        reach=_v(sheet.cell(r, 4).value),
-        frequency=_v(sheet.cell(r, 5).value) or 3.0,
+        actual_impressions=actual_impressions,
+        link_clicks=link_clicks,
+        ctr=ctr,
+        reach=reach,
+        frequency=frequency,
+        complete_views=0.0,  # filled later from DATE sheet
+        vcr=0.0,             # filled later from DATE sheet
     )
+
 
 
 def _parse_device_sheet(sheet) -> List[DeviceBreakdown]:
@@ -333,8 +375,29 @@ def _parse_gender_sheet(sheet) -> List[GenderBreakdown]:
     return result or [GenderBreakdown("Male", 0, 0, 0), GenderBreakdown("Female", 0, 0, 0)]
 
 
-def _parse_date_sheet(sheet) -> Tuple[Optional[datetime], Optional[datetime]]:
+def _parse_date_sheet(sheet) -> Tuple[Optional[datetime], Optional[datetime], float, float]:
+    """
+    DATE sheet — col 1 is date, remaining cols vary by campaign type.
+    For video campaigns this sheet also carries:
+      'Sum of Complete Views (Video)' and 'VCR (Completion Rate)' columns.
+
+    Returns: (start_date, end_date, total_complete_views, avg_vcr)
+    """
     dates: List[datetime] = []
+
+    # Detect video metric columns from row-1 headers
+    cv_col: Optional[int] = None
+    vcr_col: Optional[int] = None
+    for c in range(1, sheet.max_column + 1):
+        hdr = str(sheet.cell(1, c).value or "").strip().lower()
+        if cv_col is None and any(k in hdr for k in ["complete view", "video completion"]):
+            cv_col = c
+        if vcr_col is None and any(k in hdr for k in ["vcr", "completion rate"]):
+            vcr_col = c
+
+    total_cv: float = 0.0
+    vcr_values: List[float] = []
+
     r = 2
     while True:
         val = sheet.cell(r, 1).value
@@ -343,6 +406,8 @@ def _parse_date_sheet(sheet) -> Tuple[Optional[datetime], Optional[datetime]]:
         if _is_total_row(val):
             r += 1
             continue
+
+        # Parse date
         if isinstance(val, datetime):
             dates.append(val)
         elif isinstance(val, str):
@@ -352,9 +417,25 @@ def _parse_date_sheet(sheet) -> Tuple[Optional[datetime], Optional[datetime]]:
                     break
                 except ValueError:
                     continue
+
+        # Accumulate video metrics
+        if cv_col:
+            total_cv += _v(sheet.cell(r, cv_col).value)
+        if vcr_col:
+            vcr_val = _v(sheet.cell(r, vcr_col).value)
+            if vcr_val > 0:
+                vcr_values.append(vcr_val)
+
         r += 1
 
     if not dates:
         today = datetime.today()
-        return today, today
-    return min(dates), max(dates)
+        start_date, end_date = today, today
+    else:
+        start_date, end_date = min(dates), max(dates)
+
+    # Average VCR across days (or compute from total_cv if VCR column absent)
+    avg_vcr = sum(vcr_values) / len(vcr_values) if vcr_values else 0.0
+
+    return start_date, end_date, total_cv, avg_vcr
+

@@ -133,6 +133,15 @@ class _Generator:
             f"{camp.audience}_{camp.burst_number}", 0
         )
 
+        has_views = getattr(rd, "complete_views", 0) > 0
+        has_vcr = getattr(rd, "vcr", 0) > 0 or has_views
+
+        comp_views_val = rd.complete_views if has_views else "-"
+        vcr_val = f"=IFERROR(P{r}/I{r},0)" if has_views else (rd.vcr if has_vcr else "-")
+
+        comp_views_fmt = '#,##0' if has_views else None
+        vcr_fmt = '0.00%' if has_vcr else None
+
         # col B-S (2-19)
         values = [
             self.template.platform,          # B  2  Platform
@@ -149,8 +158,8 @@ class _Generator:
             rd.frequency,                    # M 13  Frequency
             rd.link_clicks,                  # N 14  Link Click
             f"=N{r}/I{r}",                  # O 15  CTR (formula)
-            "-",                             # P 16  Complete Views
-            "-",                             # Q 17  VCR
+            comp_views_val,                  # P 16  Complete Views
+            vcr_val,                         # Q 17  VCR
             f"=S{r}*L{r}",                  # R 18  Amount Spent (formula)
             None,                            # S 19  Investment (manual)
         ]
@@ -161,10 +170,11 @@ class _Generator:
             '0%', '0%',
             '#,##0', '#,##0', '#,##0',
             '0.00%',
-            None, None,
+            comp_views_fmt, vcr_fmt,
             '$#,##0.00;[Red]\\-"$"#,##0.00',
             '$#,##0.00;[Red]\\-"$"#,##0.00',
         ]
+
         fonts = [_FONT_B10] + [_FONT_R10] * 17
 
         for i, (val, fmt, fnt) in enumerate(zip(values, fmts, fonts)):
@@ -185,26 +195,33 @@ class _Generator:
         self._blue_title(self.row, title)
         self.row += 1
 
+        total_cv = getattr(camp.reach_data, "complete_views", 0.0)
+
         self._write_breakdown("By Device",   camp,
             [(d.device_type, d.impressions, d.clicks) for d in camp.device_breakdown],
-            seed=f"{camp.audience}-device", amount_dash=True)
+            seed=f"{camp.audience}-device", amount_dash=True,
+            total_complete_views=total_cv)
 
         self.row += 2
         self._write_breakdown("By Creative", camp,
             [(c.name, c.impressions, c.clicks) for c in camp.creative_breakdown],
-            seed=f"{camp.audience}-creative", amount_dash=True)
+            seed=f"{camp.audience}-creative", amount_dash=True,
+            total_complete_views=total_cv)
 
         self.row += 2
         self._write_breakdown("By Age",      camp,
             [(a.age_band, a.impressions, a.clicks) for a in camp.age_breakdown],
-            seed=f"{camp.audience}-age", amount_dash=False)
+            seed=f"{camp.audience}-age", amount_dash=False,
+            total_complete_views=total_cv)
 
         self.row += 2
         self._write_breakdown("By Gender",   camp,
             [(g.gender, g.impressions, g.clicks) for g in camp.gender_breakdown],
-            seed=f"{camp.audience}-gender", amount_dash=False)
+            seed=f"{camp.audience}-gender", amount_dash=False,
+            total_complete_views=total_cv)
 
-    def _write_breakdown(self, label, camp, rows, *, seed, amount_dash):
+    def _write_breakdown(self, label, camp, rows, *, seed, amount_dash,
+                         total_complete_views: float = 0.0):
         """Write a yellow sub-section header + data rows."""
         # Sub-section header row
         sub_headers = [
@@ -219,27 +236,36 @@ class _Generator:
                 align=_ALIGN_CW, border=_BORDER)
         self.row += 1
 
-        # Allocate reach across rows
+        # Allocate reach proportionally across rows
         impressions_list = [r[1] for r in rows]
         reaches = _allocate_reach(
             int(camp.reach_data.reach), impressions_list, seed
         )
 
-        for (lbl, impressions, clicks), reach in zip(rows, reaches):
+        # Allocate complete views proportionally (same logic, different seed suffix)
+        has_cv = total_complete_views > 0
+        cv_allocated = (
+            _allocate_reach(int(total_complete_views), impressions_list, seed + "-cv")
+            if has_cv else [0] * len(rows)
+        )
+
+        for (lbl, impressions, clicks), reach, cv in zip(rows, reaches, cv_allocated):
             r = self.row
+            cv_val  = cv  if has_cv else "-"
+            cv_fmt  = '#,##0' if has_cv else None
             data = [
                 lbl,
                 impressions,
                 reach,
                 FREQUENCY,
-                "-",
+                cv_val,
                 clicks,
                 f"=G{r}/C{r}",
                 "-" if amount_dash else None,
             ]
             fmts = [
                 None, '#,##0', '#,##0', '#,##0',
-                None, '#,##0', '0.00%',
+                cv_fmt, '#,##0', '0.00%',
                 '$#,##0.00;[Red]\\-"$"#,##0.00',
             ]
             for i, (val, fmt) in enumerate(zip(data, fmts)):
