@@ -134,13 +134,14 @@ class _Generator:
         )
 
         has_views = getattr(rd, "complete_views", 0) > 0
-        has_vcr = getattr(rd, "vcr", 0) > 0 or has_views
+        vcr_from_sheet = getattr(rd, "vcr", None)  # None = no VCR column in DATE sheet
 
         comp_views_val = rd.complete_views if has_views else "-"
-        vcr_val = f"=IFERROR(P{r}/I{r},0)" if has_views else (rd.vcr if has_vcr else "-")
+        # Use Grand Total VCR from DATE sheet directly — no formula
+        vcr_val = vcr_from_sheet if vcr_from_sheet is not None else "-"
 
         comp_views_fmt = '#,##0' if has_views else None
-        vcr_fmt = '0.00%' if has_vcr else None
+        vcr_fmt = '0.00%' if vcr_from_sheet is not None else None
 
         # col B-S (2-19)
         values = [

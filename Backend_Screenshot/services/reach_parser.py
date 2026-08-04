@@ -28,7 +28,7 @@ class ReachData:
     reach: float
     frequency: float
     complete_views: float = 0.0
-    vcr: float = 0.0
+    vcr: Optional[float] = None   # None = no VCR column in DATE sheet → render as "-"
 
 
 
@@ -199,10 +199,8 @@ def parse_campaign_file(filepath: str) -> CampaignData:
 
     # Inject video metrics into reach_data
     reach_data.complete_views = complete_views
-    if vcr == 0.0 and complete_views > 0 and reach_data.actual_impressions > 0:
-        reach_data.vcr = complete_views / reach_data.actual_impressions
-    else:
-        reach_data.vcr = vcr
+    # VCR comes from Grand Total row of DATE sheet only; None means column was absent
+    reach_data.vcr = vcr
 
     return CampaignData(
         audience=audience,
@@ -321,7 +319,7 @@ def _parse_creative_sheet(sheet) -> List[CreativeBreakdown]:
 
 
 def _parse_age_sheet(sheet) -> List[AgeBreakdown]:
-    AGE_BANDS = ["18-24", "25-34", "35-44", "45-54", "55-64", "65+"]
+    AGE_BANDS = ["18-24", "25-29", "30-34", "35-44", "45-54", "55+", "55-64", "65+"]
     rows: Dict[str, AgeBreakdown] = {}
     r = 2
     while True:
@@ -381,28 +379,32 @@ def _parse_date_sheet(sheet) -> Tuple[Optional[datetime], Optional[datetime], fl
     For video campaigns this sheet also carries:
       'Sum of Complete Views (Video)' and 'VCR (Completion Rate)' columns.
 
-    Returns: (start_date, end_date, total_complete_views, avg_vcr)
+    Returns: (start_date, end_date, total_complete_views, grand_total_vcr_or_None)
     """
     dates: List[datetime] = []
 
     # Detect video metric columns from row-1 headers
-    cv_col: Optional[int] = None
-    vcr_col: Optional[int] = None
+    cv_col:     Optional[int] = None   # Sum of Complete Views (Video)
+    starts_col: Optional[int] = None   # Sum of Starts (Video)  — denominator for VCR
+    vcr_col:    Optional[int] = None   # VCR (Completion Rate)  — signals column exists
     for c in range(1, sheet.max_column + 1):
         hdr = str(sheet.cell(1, c).value or "").strip().lower()
         if cv_col is None and any(k in hdr for k in ["complete view", "video completion"]):
             cv_col = c
+        if starts_col is None and "start" in hdr and "video" in hdr:
+            starts_col = c
         if vcr_col is None and any(k in hdr for k in ["vcr", "completion rate"]):
             vcr_col = c
 
-    total_cv: float = 0.0
-    vcr_values: List[float] = []
+    total_cv:     float = 0.0
+    total_starts: float = 0.0
 
     r = 2
     while True:
         val = sheet.cell(r, 1).value
         if val is None:
             break
+
         if _is_total_row(val):
             r += 1
             continue
@@ -418,13 +420,11 @@ def _parse_date_sheet(sheet) -> Tuple[Optional[datetime], Optional[datetime], fl
                 except ValueError:
                     continue
 
-        # Accumulate video metrics
+        # Accumulate daily video metrics
         if cv_col:
             total_cv += _v(sheet.cell(r, cv_col).value)
-        if vcr_col:
-            vcr_val = _v(sheet.cell(r, vcr_col).value)
-            if vcr_val > 0:
-                vcr_values.append(vcr_val)
+        if starts_col:
+            total_starts += _v(sheet.cell(r, starts_col).value)
 
         r += 1
 
@@ -434,8 +434,15 @@ def _parse_date_sheet(sheet) -> Tuple[Optional[datetime], Optional[datetime], fl
     else:
         start_date, end_date = min(dates), max(dates)
 
-    # Average VCR across days (or compute from total_cv if VCR column absent)
-    avg_vcr = sum(vcr_values) / len(vcr_values) if vcr_values else 0.0
+    # VCR = total complete views / total starts (equivalent to Grand Total formula).
+    # Grand Total row uses Excel formulas so openpyxl can't read them — we recompute.
+    # If no VCR column exists at all → return None so output shows "-".
+    if vcr_col is None:
+        grand_total_vcr: Optional[float] = None
+    elif total_starts > 0:
+        grand_total_vcr = total_cv / total_starts
+    else:
+        grand_total_vcr = 0.0
 
-    return start_date, end_date, total_cv, avg_vcr
+    return start_date, end_date, total_cv, grand_total_vcr
 
