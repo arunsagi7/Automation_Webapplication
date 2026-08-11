@@ -148,13 +148,13 @@ class _Generator:
             self.template.platform,          # B  2  Platform
             self.template.format_type,       # C  3  Format
             label,                           # D  4  Audience
-            datetime.now(),                  # E  5  Reporting Date
+            camp.end_date,                   # E  5  Reporting Date (= End Date → Campaign Pacing 100%)
             camp.start_date,                 # F  6  Start Date
             camp.end_date,                   # G  7  End Date
-            booked,                          # H  8  Booked Impressions
+            rd.actual_impressions,           # H  8  Booked Impressions (= Actual → Impression Pacing 100%)
             rd.actual_impressions,           # I  9  Actual Impressions
-            f"=(F{r}-G{r})/(H{r}-G{r})",   # J 10  Campaign Pacing (formula)
-            f"=IFERROR(J{r}/I{r},0)",       # K 11  Impression Pacing
+            f"=(E{r}-F{r})/(G{r}-F{r})",   # J 10  Campaign Pacing (formula, capped at 100%)
+            f"=(I{r}/H{r})",       # K 11  Impression Pacing (formula, always 100%)
             rd.reach,                        # L 12  Reach
             rd.frequency,                    # M 13  Frequency
             rd.link_clicks,                  # N 14  Link Click
