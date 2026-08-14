@@ -1799,15 +1799,15 @@ def build_sheet10_apps(total_imp: int, total_clk: int,
                  if u not in user_set and u not in _JUNK]
 
     if total_imp < 50_000:
-        target = random.randint(30, 40);  top_lo, top_hi = 10_000, 12_000
+        target = random.randint(40, 55);  top_lo, top_hi = 10_000, 12_000
     elif total_imp < 70_000:
-        target = random.randint(30, 40);  top_lo, top_hi = 12_000, 15_000
+        target = random.randint(55, 65);  top_lo, top_hi = 12_000, 15_000
     elif total_imp < 100_000:
-        target = random.randint(30, 40);  top_lo, top_hi = 15_000, 20_000
+        target = random.randint(65, 95);  top_lo, top_hi = 15_000, 20_000
     elif total_imp < 500_000:
-        target = random.randint(70, 110);  top_lo, top_hi = 18_000, 35_000
+        target = random.randint(100, 200);  top_lo, top_hi = 18_000, 35_000
     elif total_imp < 1_000_000:
-        target = random.randint(70, 110);  top_lo, top_hi = 40_000, 50_000
+        target = random.randint(200, 250);  top_lo, top_hi = 40_000, 50_000
     else:
         target = random.randint(70, 110)
         top_lo = int(total_imp * 0.09)   # 9% of total — scales with campaign size
