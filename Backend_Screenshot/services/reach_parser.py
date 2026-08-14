@@ -109,8 +109,8 @@ _AUDIENCE_KEYWORDS = [
 # ---------------------------------------------------------------------------
 
 REQUIRED_SHEETS = [
-    "REACH", "DATE", "APP URL", "TIME OF DAY",
-    "EXCHANGE", "DEVICE", "CREATIVE", "CITY", "AGE", "GENDER",
+    "REACH", "DATE", "TIME OF DAY",
+    "DEVICE", "CREATIVE", "CITY", "AGE", "GENDER",
 ]
 
 DEVICE_MAPPING = {
@@ -319,7 +319,7 @@ def _parse_creative_sheet(sheet) -> List[CreativeBreakdown]:
 
 
 def _parse_age_sheet(sheet) -> List[AgeBreakdown]:
-    AGE_BANDS = ["18-24", "25-29", "30-34", "35-44", "45-54", "55+", "55-64", "65+"]
+    AGE_BANDS = ["18-24", "25-34", "35-44", "45-54", "55-64", "65+", "Unknown"]
     rows: Dict[str, AgeBreakdown] = {}
     r = 2
     while True:
