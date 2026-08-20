@@ -25,6 +25,7 @@ pandas==2.2.2                  # Excel/CSV → list-of-dicts for CRM processor
 
 # %% Utilities %%
 beautifulsoup4==4.14.3         # HTML parsing helpers
+requests[socks]==2.32.3        # IP-changer: read Tor exit IP via SOCKS proxy
 
 # %% Authentication %%
 python-jose[cryptography]==3.3.0   # JWT token creation and verification

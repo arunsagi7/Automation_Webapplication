@@ -190,4 +190,4 @@ class HTTPClient {
   }
 }
 
-export default HTTPClient;
+export default new HTTPClient();

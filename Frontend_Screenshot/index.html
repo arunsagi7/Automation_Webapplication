@@ -217,6 +217,13 @@
               <label class="tgl"><input type="checkbox" checked><span class="tgl-slider"></span></label>
             </div>
           </div>
+          <!-- Live IP-changer status (Tor) -->
+          <div id="ip-status-row" title="Tor IP changer status"
+               style="display:flex;align-items:center;gap:8px;margin:12px 2px 6px;font-size:13px;color:#c7c9d1;">
+            <span id="ip-dot"
+                  style="width:9px;height:9px;border-radius:50%;background:#6b7280;display:inline-block;flex:0 0 auto;"></span>
+            <span id="ip-status-text">IP changing: checking…</span>
+          </div>
           <button class="btn-campaign" id="start-btn">
             <i class='bx bx-play-circle'></i> Start Campaign
           </button>
@@ -411,4 +418,52 @@
       }
     })();
     </script>
-  </bod
+
+    <!-- Live IP-changer status poller (Tor). Reads GET /ip-status. -->
+    <script>
+    (function () {
+      // Work out the backend base URL the same way the app does.
+      function apiBase() {
+        if (window.API_BASE_URL) return window.API_BASE_URL.replace(/\/$/, '');
+        var p = window.location.protocol;
+        if (p === 'file:') return 'http://127.0.0.1:8001';
+        if (p === 'http:' || p === 'https:') return window.location.origin;
+        return 'http://127.0.0.1:8001';
+      }
+      var dot = document.getElementById('ip-dot');
+      var txt = document.getElementById('ip-status-text');
+      if (!dot || !txt) return;
+
+      function paint(s) {
+        // s: {enabled, tor_up, current_ip, rotations}
+        if (!s.enabled) {
+          dot.style.background = '#6b7280';           // grey
+          txt.textContent = 'IP changing: OFF';
+          return;
+        }
+        if (!s.tor_up) {
+          dot.style.background = '#f59e0b';           // amber
+          txt.textContent = 'IP changing: ON — Tor not connected';
+          return;
+        }
+        dot.style.background = '#22c55e';             // green
+        var ip = s.current_ip ? s.current_ip : '…';
+        txt.textContent = 'IP changing: ON — IP ' + ip + ' — changed ' +
+                          (s.rotations || 0) + '×';
+      }
+
+      async function poll() {
+        try {
+          var r = await fetch(apiBase() + '/ip-status', { cache: 'no-store' });
+          if (r.ok) paint(await r.json());
+        } catch (e) {
+          dot.style.background = '#ef4444';           // red — backend unreachable
+          txt.textContent = 'IP changing: status unavailable';
+        }
+      }
+      poll();
+      setInterval(poll, 3000);
+    })();
+    </script>
+  </body>
+</html>

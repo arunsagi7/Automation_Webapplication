@@ -16,6 +16,16 @@ class Settings(BaseSettings):
     # Set API_KEY in .env to protect endpoints. Leave empty to disable (dev only).
     api_key: str = ""
 
+    # JWT signing secret. MUST be overridden in production (see security.py,
+    # which refuses to start in production while this is left at the default).
+    jwt_secret: str = "change-me-in-production-supersecret-key"
+    access_token_expire_minutes: int = 480
+
+    # Initial super-admin seed — used ONLY when the users table is empty.
+    # Leave blank to skip auto-seeding (no default admin is ever created).
+    initial_admin_username: str = ""
+    initial_admin_password: str = ""
+
     # ── AI Vision ─────────────────────────────────────────────────────────────
     # Claude Vision — AI-powered ad slot detection. Set in .env.
     anthropic_api_key: str = ""
