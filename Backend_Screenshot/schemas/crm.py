@@ -17,8 +17,8 @@ class CampaignRule(BaseModel):
 
 class GlobalSettings(BaseModel):
     """Global fallback metric ranges."""
-    ctr_min: float = 0.10
-    ctr_max: float = 0.55
+    ctr_min: float = 0.35
+    ctr_max: float = 0.65
     vcr_min: float = 75.0
     vcr_max: float = 89.0
     view_min: float = 75.0

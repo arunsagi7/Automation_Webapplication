@@ -39,7 +39,7 @@ from models.crm import CampaignRule as CampaignRuleModel
 from models.crm import GlobalSetting, ProcessedFile
 from schemas.crm import CampaignRule, GlobalSettings
 from services.crm_memory import load_yesterday_memory, save_today_snapshot
-from services.crm_processor import process_rows, OUTPUT_COLUMNS
+from services.crm_processor import process_rows, OUTPUT_COLUMNS, _normalize_lid
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/crm", tags=["crm"])
@@ -102,6 +102,19 @@ def create_campaign_rule(rule: CampaignRule, db: Session = Depends(get_crm_db)):
         db.commit()
         db.refresh(row)
         return {"id": row.id, "status": "created"}
+    except IntegrityError:
+        # A unique constraint rejected the row (e.g. a duplicate Line Item ID).
+        # Surface a clear 409 instead of a raw 500 with the SQL statement.
+        db.rollback()
+        logger.warning("Duplicate campaign_rule rejected for campaign=%r line_id=%r",
+                       rule.campaign, rule.line_id)
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "A rule with this Line Item ID already exists. "
+                "Use a unique Line Item ID, or edit the existing rule."
+            ),
+        )
     except Exception as e:
         db.rollback()
         logger.exception("Could not create campaign_rule")
@@ -128,6 +141,17 @@ def update_campaign_rule(rule_id: int, rule: CampaignRule, db: Session = Depends
         return {"id": rule_id, "status": "updated"}
     except HTTPException:
         raise
+    except IntegrityError:
+        db.rollback()
+        logger.warning("Duplicate campaign_rule rejected on update id=%s campaign=%r line_id=%r",
+                       rule_id, rule.campaign, rule.line_id)
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "A rule with this Line Item ID already exists. "
+                "Use a unique Line Item ID, or edit that rule instead."
+            ),
+        )
     except Exception as e:
         db.rollback()
         logger.exception("Could not update campaign_rule %s", rule_id)
@@ -226,10 +250,18 @@ def _load_db_rules(db: Session) -> dict:
             if r.min_viewability is not None: entry["min_viewability"]  = r.min_viewability
             if r.max_viewability is not None: entry["max_viewability"]  = r.max_viewability
 
-            if r.line_item_id:
-                rules_dict[r.line_item_id.strip().lower()] = entry
-            if r.campaign_name:
-                rules_dict[r.campaign_name.strip().lower()] = entry
+            lid_key  = _normalize_lid(r.line_item_id) if r.line_item_id else ""
+            camp_key = r.campaign_name.strip().lower() if r.campaign_name else ""
+            # Scope rule keys:
+            #   campaign + line item -> ONLY that line item within that campaign
+            #   line item only       -> that line item (any campaign)
+            #   campaign only        -> the whole campaign
+            if camp_key and lid_key:
+                rules_dict[f"{camp_key}|{lid_key}"] = entry
+            elif lid_key:
+                rules_dict[lid_key] = entry
+            elif camp_key:
+                rules_dict[camp_key] = entry
     except Exception as e:
         db.rollback()   # reset session so subsequent writes still work
         logger.warning("Could not load campaign_rules from DB: %s", e)
@@ -274,13 +306,22 @@ def _merge_form_rules(base: dict, form_rules: list[CampaignRule]) -> dict:
         if rule.view_min is not None: entry["min_viewability"]  = rule.view_min
         if rule.view_max is not None: entry["max_viewability"]  = rule.view_max
 
-        for name in rule.campaign.split(","):
-            key = name.strip().lower()
-            if key:
+        lid_key = _normalize_lid(rule.line_id) if rule.line_id else ""
+        campaigns = [n.strip().lower() for n in rule.campaign.split(",") if n.strip()]
+
+        if lid_key and campaigns:
+            # campaign + line item -> apply to ONLY that line item within each
+            # named campaign; other line items fall back to the global default.
+            for key in campaigns:
+                ck = f"{key}|{lid_key}"
+                merged[ck] = {**merged.get(ck, {}), **entry}
+        elif lid_key:
+            # line item only (no campaign) -> that line item, any campaign
+            merged[lid_key] = {**merged.get(lid_key, {}), **entry}
+        else:
+            # campaign(s) only -> the whole campaign
+            for key in campaigns:
                 merged[key] = {**merged.get(key, {}), **entry}
-        if rule.line_id:
-            k = rule.line_id.strip().lower()
-            merged[k] = {**merged.get(k, {}), **entry}
 
     return merged
 
