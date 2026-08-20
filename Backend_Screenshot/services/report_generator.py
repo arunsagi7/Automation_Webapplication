@@ -1366,11 +1366,20 @@ def build_sheet3_timeofday(total_imp: int, total_clk: int, ctr_reach: str):
         hourly_imp[random.randint(0, 23)] += 1 if diff > 0 else -1
     hourly_imp = deduplicate_preserving_sum(hourly_imp, gap=1)
 
+    # Per-hour CTR band anchored to the campaign's ACTUAL CTR (total_clk/total_imp)
+    # with a +/-40% spread, instead of a fixed 0.35%-0.56% window. When the real
+    # campaign CTR fell near or outside that fixed window, every eligible hour got
+    # pinned to the same band edge and all hours showed an identical CTR. Centering
+    # the band on the real rate keeps the hourly CTRs varying around it.
+    _base_ctr = (total_clk / total_imp) if total_imp > 0 else 0.0
+    ctr_lo = _base_ctr * 0.60
+    ctr_hi = _base_ctr * 1.40
+
     hourly_clk = []
     for imp in hourly_imp:
         if imp >= 180:
-            c_min = math.ceil(imp * 0.0035)
-            c_max = math.floor(imp * 0.0056)
+            c_min = math.ceil(imp * ctr_lo)
+            c_max = math.floor(imp * ctr_hi)
             hourly_clk.append(random.randint(c_min, max(c_min, c_max)))
         else:
             hourly_clk.append(0)
@@ -1384,10 +1393,10 @@ def build_sheet3_timeofday(total_imp: int, total_clk: int, ctr_reach: str):
         idx = random.choice(eligible)
         imp = hourly_imp[idx]; clk = hourly_clk[idx]
         if diff_clk > 0:
-            if (clk + 1) / imp <= 0.0056:
+            if (clk + 1) / imp <= ctr_hi:
                 hourly_clk[idx] += 1; diff_clk -= 1
         elif diff_clk < 0:
-            if clk > 1 and (clk - 1) / imp >= 0.0035:
+            if clk > 1 and (clk - 1) / imp >= ctr_lo:
                 hourly_clk[idx] -= 1; diff_clk += 1
 
     rows = [{"Time of Day": h, "Impressions": hourly_imp[h],

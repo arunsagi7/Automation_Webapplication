@@ -1,6 +1,10 @@
-import bcrypt, psycopg2, json
+import bcrypt, psycopg2, json, os, sys
 
-RAILWAY_URL = "postgresql://postgres:imGiWkhxTvTjtEGvcgyaPUKpJVrrDWjP@zephyr.proxy.rlwy.net:45185/railway"
+# Read the DB connection string from the environment — never hardcode it.
+# e.g. (PowerShell):  $env:CRM_DATABASE_URL = "postgresql://..."   then run this script.
+RAILWAY_URL = os.getenv("CRM_DATABASE_URL") or os.getenv("DATABASE_URL")
+if not RAILWAY_URL:
+    sys.exit("Set CRM_DATABASE_URL (or DATABASE_URL) in your environment before running this script.")
 
 users_to_create = [
     ("report_user", "Pass@123", "admin", ["final_report"]),

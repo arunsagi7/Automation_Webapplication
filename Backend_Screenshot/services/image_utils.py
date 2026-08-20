@@ -369,6 +369,21 @@ def find_best_match(ad_slot, creatives, tolerance=20):
             )
             continue
 
+        # Hard gate: SIZE-CLOSENESS. We keep the creative at its exact pixel size
+        # and only inject it into slots that are genuinely close in size — so it
+        # fills the slot instead of sitting tiny inside a big empty box. Creatives
+        # that don't closely match any slot fall through to in-content placement.
+        # Accept only when BOTH dimensions are within ~30% (ratio 0.70–1.43).
+        _rw = image_w / slot_w if slot_w > 0 else 0.0
+        _rh = image_h / slot_h if slot_h > 0 else 0.0
+        if not (0.70 <= _rw <= 1.43 and 0.70 <= _rh <= 1.43):
+            print(
+                f"[IMAGE-UTILS] Skipping {creative['name']} "
+                f"({image_w}x{image_h}) — size too far from slot "
+                f"{slot_w}x{slot_h} (w_ratio={_rw:.2f}, h_ratio={_rh:.2f})"
+            )
+            continue
+
         size_score        = calculate_size_score(image_w, image_h, slot_w, slot_h)
         orientation_score = calculate_orientation_score(orientation, slot_w, slot_h)
         iab_score         = calculate_iab_match_score(slot_w, slot_h, image_w, image_h)

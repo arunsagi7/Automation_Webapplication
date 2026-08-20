@@ -112,19 +112,26 @@ def _normalize_lid(val: Any) -> str:
 def _find_rule(row: dict, campaign_ctr_rules: dict) -> dict:
     """
     Priority (most specific first):
-      1. Exact Line Item ID
-      2. Line Item name
-      3. Full key  "li_id|li_name"
-      4. Campaign name
-      5. Campaign ID (numeric)
+      1. Campaign + Line Item ID  "campaign|li_id"   ← targets one line item in one campaign
+      2. Exact Line Item ID
+      3. Line Item name
+      4. Full key  "li_id|li_name"
+      5. Campaign name
+      6. Campaign ID (numeric)
+
+    The campaign-scoped line-item key is checked first so a rule set for a
+    specific line item wins for that line item, while the campaign-wide rule
+    still applies to every other line item. It also disambiguates the same
+    Line Item ID appearing under two different campaigns.
     """
     li_id   = _normalize_lid(row.get("Line Item ID") or "")
     li_name = str(row.get("Line Item") or "").strip().lower()
     li_full = f"{li_id}|{li_name}" if li_id and li_name else ""
     camp    = str(row.get("Campaign") or "").strip().lower()
     camp_id = _normalize_lid(row.get("Campaign ID") or "")
+    camp_li = f"{camp}|{li_id}" if camp and li_id else ""
 
-    for key in [li_id, li_name, li_full, camp, camp_id]:
+    for key in [camp_li, li_id, li_name, li_full, camp, camp_id]:
         if key and key in campaign_ctr_rules:
             return campaign_ctr_rules[key]
     return {}
@@ -152,7 +159,7 @@ def process_rows(
     rows: List[dict],
     yesterday_memory: Dict[str, List[dict]],
     global_min_ctr: float = 0.37,
-    global_max_ctr: float = 0.55,
+    global_max_ctr: float = 0.65,
     campaign_ctr_rules: Optional[Dict[str, dict]] = None,
 ) -> Tuple[List[dict], Dict[str, List[dict]]]:
     """
@@ -242,80 +249,74 @@ def process_rows(
         row["_min"] = min_clicks
         row["_max"] = max_clicks
 
-    # ── Step 2: De-duplicate within each Line Item group ─────────────────────
+    # ── Step 2: Balance clicks evenly within each Campaign group ─────────────
+    #   Spread Clicks as evenly as possible across the whole-number values each
+    #   row's CTR band allows, so a campaign shows the FEWEST possible repeats
+    #   and never clumps identical values together. Yesterday's values and the
+    #   previous row's value are avoided when there is room.
+    #
+    #   NOTE: true uniqueness is impossible when a campaign has more rows than
+    #   its CTR band has distinct whole-number click values (e.g. low
+    #   impressions + a narrow band). In that case this spreads the unavoidable
+    #   repeats as evenly as possible instead of clumping them.
+    #
+    #   Grouping key: Campaign name, then Campaign ID, then Line Item ID.
+    def _dedup_key(row: dict) -> str:
+        camp = str(row.get("Campaign") or "").strip().lower()
+        if camp:
+            return "camp::" + camp
+        cid = _normalize_lid(row.get("Campaign ID") or "")
+        if cid:
+            return "cid::" + cid
+        lid = _normalize_lid(row.get("Line Item ID") or "")
+        return ("lid::" + lid) if lid else "UNKNOWN"
+
     grouped: Dict[str, list] = {}
     for row in rows:
-        lid = _normalize_lid(row.get("Line Item ID") or "UNKNOWN")
-        grouped.setdefault(lid, []).append(row)
+        grouped.setdefault(_dedup_key(row), []).append(row)
 
-    for line_id, group in grouped.items():
-        prev_entries = yesterday_memory.get(line_id, [])
-        used_clicks = {p["clicks"] for p in prev_entries}
-        used_ctrs   = {p["ctr"]    for p in prev_entries}
+    for _group_key, group in grouped.items():
+        # Yesterday's click values for every line item in this campaign — avoided
+        # when there is spare room, so today's numbers differ from yesterday's.
+        yest_clicks: set = set()
+        for row in group:
+            _lid = _normalize_lid(row.get("Line Item ID") or "")
+            for p in yesterday_memory.get(_lid, []):
+                yest_clicks.add(p["clicks"])
+
+        usage: Dict[int, int] = {}          # click value -> times used today in this campaign
         last_click: Optional[int] = None
-
         group.sort(key=lambda r: safe_int(r.get("Impressions")))
 
         for row in group:
-            current_click = row["Clicks"]
             mn = row["_min"]
             mx = row["_max"]
             impressions = safe_int(row.get("Impressions"))
 
             if mn == 0 and mx == 0:
-                used_clicks.add(current_click)
-                last_click = current_click
+                row["Clicks"] = 0
+                row["Click Rate (CTR)"] = "0.00%"
+                usage[0] = usage.get(0, 0) + 1
+                last_click = 0
                 continue
 
-            current_ctr = (
-                f"{(current_click / impressions * 100):.2f}%"
-                if impressions > 0 else "0.00%"
-            )
-            # Sequential gap: require at least 2 apart when the range is wide enough
-            _seq_gap = 2 if (mx - mn) >= 4 else 1
-            needs_change = (
-                current_click in used_clicks
-                or current_ctr in used_ctrs
-                or (last_click is not None and abs(current_click - last_click) <= _seq_gap)
-            )
+            candidates = list(range(mn, mx + 1))
+            # 1) Prefer the least-used value(s) so the campaign stays balanced.
+            fewest = min(usage.get(c, 0) for c in candidates)
+            pool = [c for c in candidates if usage.get(c, 0) == fewest]
+            # 2) Among those, avoid repeating the previous row and yesterday's values.
+            pref = [c for c in pool if c != last_click and c not in yest_clicks]
+            if not pref:
+                pref = [c for c in pool if c != last_click] or pool
+            # 3) Random tie-break keeps runs varied from day to day.
+            chosen = random.choice(pref)
 
-            if needs_change:
-                new_click = current_click
-                new_ctr   = current_ctr
-                for _ in range(150):
-                    new_click = random.randint(mn, mx)
-                    new_ctr   = (
-                        f"{(new_click / impressions * 100):.2f}%"
-                        if impressions > 0 else "0.00%"
-                    )
-                    if (
-                        new_click not in used_clicks
-                        and new_ctr not in used_ctrs
-                        and (last_click is None or abs(new_click - last_click) > _seq_gap)
-                    ):
-                        break
-                else:
-                    # All values exhausted (very tight range) —
-                    # relax sequential constraint, just avoid exact yesterday duplicates
-                    for c in range(mn, mx + 1):
-                        c_ctr = f"{(c / impressions * 100):.2f}%" if impressions > 0 else "0.00%"
-                        if c not in used_clicks and c_ctr not in used_ctrs:
-                            new_click = c
-                            new_ctr   = c_ctr
-                            break
-                current_click = new_click
-                row["Clicks"] = current_click
-                row["Click Rate (CTR)"] = (
-                    f"{(current_click / impressions * 100):.2f}%"
-                    if impressions > 0 else "0.00%"
-                )
-
-            used_clicks.add(current_click)
-            used_ctrs.add(
-                f"{(current_click / impressions * 100):.2f}%"
-                if impressions > 0 else "0.00%"
+            row["Clicks"] = chosen
+            row["Click Rate (CTR)"] = (
+                f"{(chosen / impressions * 100):.2f}%" if impressions > 0 else "0.00%"
             )
-            last_click = current_click
+            usage[chosen] = usage.get(chosen, 0) + 1
+            last_click = chosen
 
     rows.sort(key=lambda r: r["_originalIndex"])
 

@@ -1,0 +1,12 @@
+INFO Target CRM database: postgresql://postgres:***@reseau.proxy.rlwy.net:22848/railway
+INFO Current indexes on campaign_rules:
+INFO   - campaign_rules_pkey                      UNIQUE
+INFO   - ix_campaign_rules_line_item_id           UNIQUE
+INFO Dropping UNIQUE index ix_campaign_rules_line_item_id ...
+INFO After repair:
+INFO Current indexes on campaign_rules:
+INFO   - campaign_rules_pkey                      UNIQUE
+INFO   - ix_campaign_rules_line_item_id           non-unique
+INFO SUCCESS: campaign_rules.line_item_id is now non-unique. Campaign-only rules can coexist.
+EXITCODE=0
+===DONE===

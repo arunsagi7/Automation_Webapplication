@@ -1,0 +1,6 @@
+Target CRM database: postgresql://postgres:***@reseau.proxy.rlwy.net:22848/railway
+PASS: inserted two campaign-only rules (blank Line Item ID) with no unique-key error.
+Rolled back — no data was added or changed.
+RESULT: TEST PASSED — the fix is working.
+EXITCODE=0
+===DONE===

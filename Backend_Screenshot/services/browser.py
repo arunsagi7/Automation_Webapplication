@@ -17,6 +17,7 @@ from services.image_utils import find_best_match, get_local_creatives, get_creat
 from services.ppt_style_extractor import get_ppt_styles
 from services.vision_detector import detect_ads_with_vision
 from services.smart_placement import find_smart_placement
+from services import ip_changer   # Tor-based IP changer (optional, gated by PROXY_ENABLED)
 
 logger = logging.getLogger(__name__)
 
@@ -722,13 +723,17 @@ _ADDRESS_BAR_JS = """
 
 _NATURAL_PLACEMENT_JS = """
 ([c_w, c_h, base64, is_vertical]) => {
+    // ── Industry-standard IN-CONTENT ad insertion ────────────────────────────
+    // Places the creative in the normal document flow (between paragraphs),
+    // centered, scaled to fit, and clearly labeled — like a real in-article ad.
+    // It NEVER floats over editorial content. Works on desktop and mobile.
+
+    // 1. Remove any previously injected unit.
     document.querySelectorAll('.automation-overlay-container').forEach(el => el.remove());
     const oldStyle = document.getElementById('__ad_pass2_b_style__');
     if (oldStyle) oldStyle.remove();
 
-    const SPACING = 16;
-    const HEADER_HEIGHT = 48;
-
+    // 2. Hide the site's own ad slots so our injected ad is the only one shown.
     const adSelectors = [
         'ins.adsbygoogle', '[id^="google_ads_iframe"]', '[id^="div-gpt-ad"]',
         '[class*="ad-unit"]', '[id*="ad-unit"]', '.ad-container', '.ad-slot',
@@ -736,265 +741,111 @@ _NATURAL_PLACEMENT_JS = """
         'iframe[id^="ads-"]',
         '[class*="adBox"]', '[class*="ad-box"]', '[class*="AdBox"]',
         '[class*="leaderboard"]', '[class*="billboard"]',
-        '[class*="ad_"]', '[id*="ad_"]', '[class*="_ad"]',
-        '[data-ad-unit]', '[data-ad]',
-        'div[style*="width:728px"]', 'div[style*="width: 728px"]'
+        '[data-ad-unit]', '[data-ad]'
     ];
-    document.querySelectorAll(adSelectors.join(', ')).forEach(el => {
-        el.style.setProperty('display', 'none', 'important');
-        el.style.setProperty('visibility', 'hidden', 'important');
-        el.style.setProperty('height', '0', 'important');
-        el.style.setProperty('min-height', '0', 'important');
-        el.style.setProperty('overflow', 'hidden', 'important');
+    try {
+        document.querySelectorAll(adSelectors.join(', ')).forEach(el => {
+            el.style.setProperty('display', 'none', 'important');
+        });
+    } catch (e) {}
 
-        let parent = el.parentElement;
-        while (parent && parent !== document.body) {
-            const kids = Array.from(parent.children);
-            const allHidden = kids.every(k =>
-                k.style.display === 'none' ||
-                k.style.visibility === 'hidden' ||
-                k.getBoundingClientRect().height === 0
-            );
-            if (allHidden) {
-                parent.style.setProperty('display', 'none', 'important');
-                parent = parent.parentElement;
-            } else {
-                break;
-            }
-        }
-    });
-
-    if (!is_vertical) {
-        const NAV_SELECTORS = [
-            '[class*="ipc-page-header"]',
-            '[class*="NavBar"]',
-            '[class*="navbar"]',
-            '[data-testid="header"]',
-            'header nav',
-            'nav[role="navigation"]',
-            '[role="navigation"]',
-            'nav',
-            'header',
-            '.navbar',
-            '.nav-bar',
-            '.site-header',
-            '.header',
-            '#header',
-            '#navbar',
-            '#nav',
-            '#site-header'
-        ];
-        let navEl = null;
-        for (let i = 0; i < NAV_SELECTORS.length; i++) {
-            const candidates = document.querySelectorAll(NAV_SELECTORS[i]);
-            for (let j = 0; j < candidates.length; j++) {
-                const rect = candidates[j].getBoundingClientRect();
-                if (rect.height > 0) {
-                    if (!navEl || rect.bottom > navEl.getBoundingClientRect().bottom) {
-                        navEl = candidates[j];
-                    }
-                }
-            }
-            if (navEl) break;
-        }
-
-        const banner = document.createElement('div');
-        banner.className = 'automation-overlay-container';
-        banner.style.cssText = [
-            'display:flex!important',
-            'align-items:center!important',
-            'justify-content:center!important',
+    // 3. Build a clean, in-flow, labeled ad unit that scales to fit the column.
+    function buildAdUnit(maxWidth) {
+        const wrap = document.createElement('div');
+        wrap.className = 'automation-overlay-container';
+        wrap.setAttribute('data-injected', '1');
+        wrap.style.cssText = [
+            'display:block!important',
             'width:100%!important',
-            'height:' + c_h + 'px!important',
-            'overflow:visible!important',
-            'position:relative!important',
-            'box-sizing:border-box!important',
-            'margin:0!important',
+            'margin:24px auto!important',
             'padding:0!important',
-            'background:transparent!important',
-            'z-index:8999!important'
+            'text-align:center!important',
+            'box-sizing:border-box!important',
+            'clear:both!important',
+            'position:relative!important',
+            'float:none!important',
+            'z-index:1!important'
+        ].join(';');
+
+        const label = document.createElement('div');
+        label.textContent = 'Advertisement';
+        label.style.cssText = [
+            'font:11px/1.4 Arial,Helvetica,sans-serif!important',
+            'letter-spacing:0.06em!important',
+            'text-transform:uppercase!important',
+            'color:#9aa0a6!important',
+            'text-align:center!important',
+            'margin:0 0 6px 0!important',
+            'padding:0!important'
         ].join(';');
 
         const img = document.createElement('img');
         img.src = base64;
-        // Exact uploaded dimensions — no scaling, no object-fit, no constraints
+        // Scale DOWN to fit the column width, preserving aspect ratio.
+        // Never upscale beyond the creative's real pixel size.
+        const cap = Math.min(c_w, maxWidth);
         img.style.cssText = [
             'display:block!important',
-            'width:' + c_w + 'px!important',
-            'height:' + c_h + 'px!important',
-            'min-width:' + c_w + 'px!important',
-            'min-height:' + c_h + 'px!important',
-            'max-width:none!important',
-            'max-height:none!important',
-            'flex-shrink:0!important',
-            'margin:0!important',
+            'width:' + cap + 'px!important',
+            'height:auto!important',
+            'max-width:100%!important',
+            'margin:0 auto!important',
             'padding:0!important',
             'border:none!important',
+            'box-shadow:0 1px 6px rgba(0,0,0,0.12)!important',
             'pointer-events:none!important'
         ].join(';');
-        banner.appendChild(img);
 
-        const bodyChildren = Array.from(document.body.children);
-        let insertTarget = null;
+        wrap.appendChild(label);
+        wrap.appendChild(img);
+        return wrap;
+    }
 
-        for (const child of bodyChildren) {
-            const tag = child.tagName.toLowerCase();
-            const cls = (child.className || '').toLowerCase();
-            const id  = (child.id || '').toLowerCase();
+    // 4. Find the article / main content body.
+    const contentSels = [
+        'article', '[role="main"]', 'main',
+        '.article-body', '.article__body', '.post-content', '.entry-content',
+        '.article-content', '.story-body', '.content__article-body',
+        '.post__content', '#content', '.content', '.main-content', '#main-content'
+    ];
+    let content = null;
+    for (const sel of contentSels) {
+        const el = document.querySelector(sel);
+        if (el && el.getBoundingClientRect().height > 200) { content = el; break; }
+    }
 
-            const isNav = tag === 'nav' || tag === 'header' ||
-                          cls.includes('header') || cls.includes('nav') ||
-                          id.includes('header') || id.includes('nav') ||
-                          child.getAttribute('role') === 'navigation';
+    // 5. Work out a sensible max width (content column minus a small gutter).
+    const vw = window.innerWidth || document.documentElement.clientWidth || 390;
+    let maxWidth = vw - 24;
+    if (content) {
+        const cw = content.getBoundingClientRect().width;
+        if (cw > 40) maxWidth = Math.min(maxWidth, cw - 16);
+    }
+    if (maxWidth < 120) maxWidth = 120;
 
-            if (!isNav && child.getBoundingClientRect().height > 0) {
-                insertTarget = child;
-                break;
-            }
+    const unit = buildAdUnit(maxWidth);
+
+    // 6. Insert BETWEEN paragraphs when possible (most natural).
+    if (content) {
+        const paras = Array.from(content.querySelectorAll('p'))
+            .filter(p => p.getBoundingClientRect().height > 20);
+        if (paras.length >= 2) {
+            const idx = Math.min(2, Math.floor(paras.length / 2));
+            const anchor = paras[idx] || paras[paras.length - 1];
+            anchor.parentNode.insertBefore(unit, anchor.nextSibling);
+            console.log('[NATURAL] In-content ad inserted after paragraph ' + idx);
+            return true;
         }
-
-        if (insertTarget) {
-            document.body.insertBefore(banner, insertTarget);
-        } else if (navEl && navEl.parentNode) {
-            navEl.parentNode.insertBefore(banner, navEl.nextSibling);
-        } else {
-            document.body.insertBefore(banner, document.body.firstChild);
-        }
-
-        const bannerH = banner.getBoundingClientRect().height || c_h;
-        const gap = bannerH + 4;
-        const style = document.createElement('style');
-        style.id = '__ad_pass2_b_style__';
-        style.textContent = [
-            'body > main',
-            'body > [role="main"]',
-            'body > .main',
-            'body > #main',
-            'body > .main-content',
-            'body > #main-content',
-            'body > .page-content',
-            'body > #page-content',
-            'body > .wrapper',
-            'body > #wrapper',
-            'body > .container',
-            'body > #container',
-            'body > .content-wrap',
-            'body > .site-content',
-            'body > #site-content',
-            'body > article',
-            'body > section'
-        ].join(',') + ' { margin-top: ' + gap + 'px !important; box-sizing: border-box !important; }';
-        document.head.appendChild(style);
-
-        console.log('[NATURAL] Horizontal banner: creative=' + c_w + 'x' + c_h + ', strip height=' + bannerH + ', content gap=' + gap + 'px');
-        return true;
-
-    } else {
-        // Detect whether to place on RIGHT or LEFT.
-        // Check if the page already has a right-side ad column.
-        const pageW = document.documentElement.scrollWidth || window.innerWidth;
-        const rightThreshold = pageW * 0.6;
-        const rightAdSelectors = [
-            '[id^="div-gpt-ad"]', '[id*="gpt-ad"]', 'ins.adsbygoogle',
-            '[class*="adBox"]', '[class*="ad-unit"]', '[class*="sidebar-ad"]',
-            '[class*="adBlock"]', '[class*="advertisement"]'
-        ];
-        let hasRightAd = false;
-        for (const sel of rightAdSelectors) {
-            document.querySelectorAll(sel).forEach(el => {
-                const r = el.getBoundingClientRect();
-                const iframe = el.querySelector('iframe');
-                const w = (r.width > 10) ? r.width : (iframe ? iframe.getBoundingClientRect().width : 0);
-                const x = r.left + window.scrollX;
-                if (w > 10 && x > rightThreshold) hasRightAd = true;
-            });
-        }
-
-        const useRight = hasRightAd;
-        const gutterPos = useRight ? 'right:0!important' : 'left:0!important';
-        const borderSide = useRight ? 'border-left:1px solid #d8d8d8!important' : 'border-right:1px solid #d8d8d8!important';
-
-        const gutter = document.createElement('div');
-        gutter.className = 'automation-overlay-container';
-        gutter.style.cssText = [
-            'position:fixed!important',
-            'top:0!important',
-            gutterPos,
-            'width:' + (c_w + SPACING * 2) + 'px!important',
-            'height:100vh!important',
-            'background:#f0f0f0!important',
-            borderSide,
-            'z-index:2147483644!important',
-            'pointer-events:none!important'
-        ].join(';');
-        document.body.appendChild(gutter);
-
-        const containerPos = useRight
-            ? 'right:' + SPACING + 'px!important'
-            : 'left:' + SPACING + 'px!important';
-
-        const container = document.createElement('div');
-        container.className = 'automation-overlay-container';
-        container.style.cssText = [
-            'position:fixed!important',
-            'top:' + (HEADER_HEIGHT + SPACING) + 'px!important',
-            containerPos,
-            'width:' + c_w + 'px!important',
-            'height:' + c_h + 'px!important',
-            'z-index:2147483646!important',
-            'display:flex!important',
-            'align-items:center!important',
-            'justify-content:center!important',
-            'pointer-events:none!important',
-            'box-shadow:0 2px 12px rgba(0,0,0,0.15)!important',
-            'border-radius:4px!important',
-            'overflow:hidden!important',
-            'background:#ffffff!important'
-        ].join(';');
-
-        const img = document.createElement('img');
-        img.src = base64;
-        // Exact uploaded dimensions — no scaling, no object-fit, no constraints
-        img.style.cssText = [
-            'width:' + c_w + 'px!important',
-            'height:' + c_h + 'px!important',
-            'min-width:' + c_w + 'px!important',
-            'min-height:' + c_h + 'px!important',
-            'max-width:none!important',
-            'max-height:none!important',
-            'display:block!important',
-            'pointer-events:none!important'
-        ].join(';');
-        container.appendChild(img);
-        document.body.appendChild(container);
-
-        const rootSelectors = [
-            '#root', '#app', '#__next', '#main', 'main',
-            '[role="main"]', '.wrapper', '#wrapper',
-            '.container', '#container', '.site-wrapper',
-            '.page-wrapper', '#page-wrapper'
-        ];
-        let rootEl = null;
-        for (const sel of rootSelectors) {
-            const el = document.querySelector(sel);
-            if (el) { rootEl = el; break; }
-        }
-
-        // Only push content over when placing on the LEFT;
-        // right-side placement overlaps the existing ad column so no shift needed.
-        if (!useRight) {
-            const shiftPx = c_w + SPACING * 2 + 8;
-            if (rootEl) {
-                rootEl.style.setProperty('margin-left', shiftPx + 'px', 'important');
-                rootEl.style.setProperty('box-sizing', 'border-box', 'important');
-            } else {
-                document.body.style.setProperty('margin-left', shiftPx + 'px', 'important');
-            }
-        }
-
-        console.log('[NATURAL] Vertical sidebar (' + (useRight ? 'right' : 'left') + '): creative=' + c_w + 'x' + c_h);
+        // No paragraphs — put it at the top of the content area, still in-flow.
+        content.insertBefore(unit, content.firstChild);
+        console.log('[NATURAL] In-content ad inserted at top of content area');
         return true;
     }
+
+    // 7. Last resort: top of body in NORMAL flow (never fixed/overlay).
+    document.body.insertBefore(unit, document.body.firstChild);
+    console.log('[NATURAL] In-content ad inserted at top of body (no content container)');
+    return true;
 }
 """
 
@@ -2292,9 +2143,25 @@ async def open_website(urls: list[str] | None = None, emit_cb=None, device: str 
             user_data_dir = f"/tmp/{_bdata_name}"
         pathlib.Path(user_data_dir).mkdir(parents=True, exist_ok=True)
 
+        # ── IP changer (Tor) — optional, controlled by PROXY_ENABLED ──────────
+        # When enabled AND Tor is actually reachable, route the browser through
+        # Tor's SOCKS proxy and rotate the exit IP once per site (see the batch
+        # loop below). If Tor is NOT reachable we log a warning and continue
+        # WITHOUT a proxy, so a scan never breaks. When disabled, everything
+        # behaves exactly as before (proxy is None = no proxy).
+        ip_changer.reset_counters()
+        _ip_on    = ip_changer.is_enabled() and ip_changer.is_tor_reachable()
+        _ip_proxy = ip_changer.get_proxy() if _ip_on else None
+        if ip_changer.is_enabled() and not _ip_on:
+            logger.warning("[IP] PROXY_ENABLED is on but Tor is not reachable — "
+                           "scanning WITHOUT IP changing.")
+        elif _ip_on:
+            logger.info("[IP] IP changing ON — routing through Tor, one IP per site.")
+
         context = await pw.chromium.launch_persistent_context(
             user_data_dir,
             headless=_cfg.headless,
+            proxy=_ip_proxy,
             viewport=_viewport,
             device_scale_factor=_scale,
             is_mobile=is_mobile,
@@ -2331,7 +2198,8 @@ async def open_website(urls: list[str] | None = None, emit_cb=None, device: str 
 
         master_creatives = get_local_creatives(device=device)
         creatives_lock   = asyncio.Lock()
-        max_concurrency  = DEFAULT_MAX_CONCURRENCY
+        # IP changing needs one site at a time so each gets its own clean IP.
+        max_concurrency  = 1 if _ip_on else DEFAULT_MAX_CONCURRENCY
 
         await emit_cb({
             "type": "started",
@@ -2364,6 +2232,14 @@ async def open_website(urls: list[str] | None = None, emit_cb=None, device: str 
         while idx < len(urls):
             batch  = urls[idx:idx + max_concurrency]
             idx   += len(batch)
+            # Rotate to a fresh Tor exit IP before each site (batch is size 1
+            # when IP changing is on), then push the new IP + count to the UI.
+            if _ip_on:
+                _ip, _count = await asyncio.to_thread(ip_changer.renew_and_report)
+                await emit_cb({
+                    "type": "ip_rotated",
+                    "payload": {"ip": _ip, "count": _count, "urls": batch},
+                })
             results.extend(await run_batch(batch))
 
         # Notify frontend about creatives with no matching slot

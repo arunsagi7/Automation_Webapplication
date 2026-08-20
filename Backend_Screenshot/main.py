@@ -25,7 +25,7 @@ from core.config import get_settings
 from core.logging import configure_logging
 from core.paths import FRONTEND_DIR, get_paths
 from database.db import engine
-from routers import auth, creatives, crm, final_report, ppt_store, reach_report, results, scan, screenshot_db, users, utilities
+from routers import auth, creatives, crm, final_report, ip_status, ppt_store, reach_report, results, scan, screenshot_db, users, utilities
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 configure_logging()
@@ -74,6 +74,7 @@ app.include_router(crm.router)
 app.include_router(final_report.router)
 app.include_router(screenshot_db.router)
 app.include_router(reach_report.router)
+app.include_router(ip_status.router)     # /ip-status — live IP-changer status
 
 # ── Static directories ────────────────────────────────────────────────────────
 paths = get_paths()
@@ -149,29 +150,39 @@ async def startup_event():
             conn.rollback()
     logger.info("CRM DB column migrations complete")
 
-    # ── Auto-create default super_admin if no users exist ────────────────────
+    # ── Seed the initial super_admin from env, only if no users exist ────────
+    # No hardcoded credentials. The admin is created ONLY when both
+    # INITIAL_ADMIN_USERNAME and INITIAL_ADMIN_PASSWORD are set in the
+    # environment/.env. Otherwise nothing is created.
     try:
         from database.crm_db import CrmSessionLocal
+        from core.security import hash_password
         from models.user import User
-        from core.security import get_password_hash
-        from models.user import User
+        _admin_user = settings.initial_admin_username.strip()
+        _admin_pass = settings.initial_admin_password.strip()
         db = CrmSessionLocal()
         try:
             if db.query(User).count() == 0:
-                su = User(
-                    username="admin",
-                    hashed_password=get_password_hash("admin123"),
-                    role="super_admin",
-                    is_active=True,
-                    allowed_pages=None,
-                )
-                db.add(su)
-                db.commit()
-                logger.info("Default super_admin created (username=admin)")
+                if _admin_user and _admin_pass:
+                    su = User(
+                        username=_admin_user,
+                        hashed_password=hash_password(_admin_pass),
+                        role="super_admin",
+                        is_active=True,
+                        allowed_pages=None,
+                    )
+                    db.add(su)
+                    db.commit()
+                    logger.info("Initial super_admin created from env (username=%s)", _admin_user)
+                else:
+                    logger.warning(
+                        "No users exist and INITIAL_ADMIN_USERNAME/PASSWORD are not set — "
+                        "no admin was seeded. Set them in .env and restart to create one."
+                    )
         finally:
             db.close()
     except Exception as e:
-        logger.warning("Could not auto-create super_admin: %s", e)
+        logger.warning("Could not seed super_admin: %s", e)
 
 
 # ── Frontend SPA (must be LAST) ───────────────────────────────────────────────

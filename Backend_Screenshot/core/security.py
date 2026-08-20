@@ -11,19 +11,29 @@ from typing import Optional
 import bcrypt
 from jose import JWTError, jwt
 
+from core.config import get_settings
+
 logger = logging.getLogger(__name__)
+
+_settings = get_settings()
 
 # ── Secret key ────────────────────────────────────────────────────────────────
 _DEFAULT_SECRET = "change-me-in-production-supersecret-key"
-JWT_SECRET      = os.getenv("JWT_SECRET", _DEFAULT_SECRET)
+# Prefer a real environment variable (e.g. the Render dashboard); fall back to
+# the value loaded from .env via Settings; finally the placeholder default.
+JWT_SECRET      = os.getenv("JWT_SECRET") or _settings.jwt_secret or _DEFAULT_SECRET
 JWT_ALGORITHM   = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))  # 8 hours
+ACCESS_TOKEN_EXPIRE_MINUTES = int(
+    os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", str(_settings.access_token_expire_minutes))
+)  # default 8 hours
 
-# Warn loudly if running in production with the default secret
-if JWT_SECRET == _DEFAULT_SECRET and os.getenv("APP_ENV", "development") == "production":
-    logger.critical(
-        "SECURITY: JWT_SECRET is set to the default placeholder in production! "
-        "Set a strong random JWT_SECRET env var immediately."
+# Fail-closed: never run in production on the default/placeholder secret.
+# A known secret means anyone can forge admin tokens, so we refuse to start.
+if JWT_SECRET == _DEFAULT_SECRET and _settings.app_env == "production":
+    raise RuntimeError(
+        "SECURITY: JWT_SECRET is missing or left at the default placeholder while "
+        "APP_ENV=production. Set a strong random JWT_SECRET (e.g. "
+        "`python -c \"import secrets; print(secrets.token_hex(32))\"`) before starting."
     )
 
 # ── Password hashing (bcrypt direct — avoids passlib/bcrypt version conflicts) ─
@@ -33,6 +43,9 @@ _BCRYPT_ROUNDS = int(os.getenv("BCRYPT_ROUNDS", "10"))
 
 def hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)).decode("utf-8")
+
+
+get_password_hash = hash_password
 
 
 def verify_password(plain: str, hashed: str) -> bool:
